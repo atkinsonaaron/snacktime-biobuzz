@@ -19,6 +19,23 @@ apply plugin: 'dev.frozenmilk.sinister.sloth.load'
 android {
     namespace = 'org.firstinspires.ftc.teamcode'
 
+    buildFeatures {
+        buildConfig = true
+    }
+
+    // Traceability: stamp git hash + build time into BuildConfig so every JSON snapshot
+    // (util/Persistence.java, hardware/BuildInfo.java) points back to exact source (CLAUDE.md §7, §12).
+    def gitHash = "unknown"
+    try {
+        gitHash = 'git rev-parse --short HEAD'.execute([], project.rootDir).text.trim()
+    } catch (ignored) { }
+    def buildTime = new Date().format("yyyy-MM-dd'T'HH:mm:ss")
+
+    defaultConfig {
+        buildConfigField "String", "GIT_HASH", "\"${gitHash}\""
+        buildConfigField "String", "BUILD_TIME", "\"${buildTime}\""
+    }
+
     packagingOptions {
         jniLibs.useLegacyPackaging true
     }
