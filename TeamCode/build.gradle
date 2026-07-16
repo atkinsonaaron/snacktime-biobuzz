@@ -14,6 +14,7 @@
 // Include common definitions from above.
 apply from: '../build.common.gradle'
 apply from: '../build.dependencies.gradle'
+apply plugin: 'dev.frozenmilk.sinister.sloth.load'
 
 android {
     namespace = 'org.firstinspires.ftc.teamcode'
@@ -51,7 +52,8 @@ dependencies {
     implementation "org.solverslib:pedroPathing:0.3.4" // pedroPathing
     //    implementation "org.solverslib:photon:0.3.4" // photon is optional (see docs for more info)
 
-    implementation "com.acmerobotics.dashboard:dashboard:0.5.1" // FTC Dashboard
+    implementation "com.acmerobotics.slothboard:dashboard:0.2.4+0.5.1" // FTC Dashboard (Sloth fork — swaps stock dashboard to avoid Sloth hot-reload conflict)
+    implementation "dev.frozenmilk.sinister:Sloth:0.2.4" // Sloth hot-reload runtime
 
     // Pedro Pathing
     implementation 'com.pedropathing:ftc:2.0.6'
