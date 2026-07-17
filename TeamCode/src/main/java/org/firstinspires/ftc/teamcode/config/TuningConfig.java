@@ -23,6 +23,7 @@ public class TuningConfig {
     // ---- Drivetrain ---------------------------------------------------------------
     public static double driveSpeedCap = 1.0;      // 0..1, teleop speed multiplier
     public static double driveSlowModeCap = 0.35;  // 0..1, precision mode multiplier
+    public static double driveDeadzone = 0.05;     // 0..1, stick inputs below this are treated as zero
 
     // ---- Game mechanism tunables go here at kickoff --------------------------------
     // Follow the drivetrain pattern above: public static double, non-final, with units.

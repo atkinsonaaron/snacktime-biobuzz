@@ -1,6 +1,6 @@
 # STATUS.md — where this project actually is
 
-**Last updated:** 2026-07-16, end of the first setup session.
+**Last updated:** 2026-07-17 — Sloth hot-reload proven on the hub.
 
 **Read `CLAUDE.md` first** — that's the charter (rules + architecture) and it governs everything.
 This file is only the *current state*: what's verified, what's left, and what to do next. Keep it
@@ -184,7 +184,7 @@ If the count isn't 18, something's stale — re-check against the current
 ## Next action
 
 **"What's LEFT to do" items 1–3 are DONE** (code-side, 2026-07-15):
-- Sloth 0.2.4 installed (`a52654c`) — on-robot hot-reload proof still pending (§13).
+- Sloth 0.2.4 installed (`a52654c`) — **on-robot hot-reload PROVEN 2026-07-17** (sub-second load on the hub).
 - `GIT_HASH` + `BUILD_TIME` in TeamCode `BuildConfig` (`42696d9`) — verified in generated source.
 - JUnit 4.13.2 added (`bd80d2f`) — `./gradlew :TeamCode:test` runs 4 tests, 0 failures.
 - Logcat dropped as a task — RC persistent match logs + Panels cover the use cases; no fix needed.
@@ -194,11 +194,9 @@ Remaining before Phase 0 is proven:
 1. **Commit the skeleton + docs** (STATUS.md #4) — `CLAUDE.md`, `STATUS.md`, `WORKFLOW.md`,
    `SETUP.md`, `CHANGELOG.md`, `build.gradle.additions`, and all untracked `teamcode/` Java files
    are still untracked. Commit them when ready to make the skeleton the baseline.
-2. **On-robot: prove Sloth hot-reload** — full install once, edit a file under
-   `org.firstinspires.ftc.teamcode`, confirm sub-second reload on the hub (§13 acceptance).
-3. **On-robot: prove snapshot writes** — run any OpMode, pull `snacktime_snapshot.json` off the
+2. **On-robot: prove snapshot writes** — run any OpMode, pull `snacktime_snapshot.json` off the
    hub, confirm `gitHash` field is a real commit hash (not `"unknown"`).
-4. **On-robot: prove Pedro follows a path** — a version mismatch appears at runtime, not at build.
+3. **On-robot: prove Pedro follows a path** — a version mismatch appears at runtime, not at build.
    "It compiled" proves nothing. Run the Pedro tuning OpModes with the Pinpoint wired in.
 
 ---

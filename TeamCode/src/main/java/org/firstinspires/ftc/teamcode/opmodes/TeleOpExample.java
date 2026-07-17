@@ -14,9 +14,6 @@ import org.firstinspires.ftc.teamcode.util.BulkReads;
 import org.firstinspires.ftc.teamcode.util.LoopTimer;
 import org.firstinspires.ftc.teamcode.util.Persistence;
 
-// test for Sloth Load timing comment
-// test for Sloth load timing 2
-
 /**
  * TeleOpExample — field-centric mecanum drive. LEFT_BUMPER = slow mode.
  *
@@ -61,11 +58,11 @@ public class TeleOpExample extends CommandOpMode {
         // Field-centric: Pedro rotates strafe/forward by the Pinpoint heading before applying power.
         // Sign convention from PedroTeleOpSample: (-leftY, -leftX, -rightX).
         // TODO: if a direction is backwards on the robot, flip that sign.
-        follower.setTeleOpDrive(
-                -driver.getLeftY() * cap,
-                -driver.getLeftX() * cap,
-                -driver.getRightX() * cap,
-                false);
+        double dz = TuningConfig.driveDeadzone;
+        double forward = applyDeadzone(-driver.getLeftY(), dz);
+        double strafe  = applyDeadzone(-driver.getLeftX(), dz);
+        double turn    = applyDeadzone(-driver.getRightX(), dz);
+        follower.setTeleOpDrive(forward * cap, strafe * cap, turn * cap, false);
         follower.update();
 
         // Runs the command scheduler + every subsystem's periodic().
@@ -78,6 +75,11 @@ public class TeleOpExample extends CommandOpMode {
         telemetry.addData("Worst ms", loopTimer.getMaxLoopMs());
         telemetry.addData("Heading °", Math.toDegrees(follower.getPose().getHeading()));
         telemetry.update();
+    }
+
+    /** Returns 0 if |value| is within the deadzone, otherwise passes value through unchanged. */
+    private static double applyDeadzone(double value, double deadzone) {
+        return Math.abs(value) < deadzone ? 0.0 : value;
     }
 
     @Override
