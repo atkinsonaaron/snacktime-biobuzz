@@ -324,7 +324,10 @@ Persistent control/sensor suite (carries across seasons):
 | Vision | Limelight 3A ×2 | USB 3.0 | detection on-device; used for relative **aiming, not pose** (§3) |
 | Odometry | goBILDA Pinpoint (V2) | I2C | **single source of pose (no fusion)**; read once/loop; mind wire routing/ferrite |
 | Distance | Brushland Labs Color Rangefinder | Analog | analog distance mode; cheap to read (rides bulk read) |
-| Drivetrain | Mecanum (goBILDA Yellow Jacket motors) | — | per-wheel health telemetry required |
+| Drivetrain FL | `LF_Motor` (port 0) | — | goBILDA Yellow Jacket; per-wheel health telemetry required |
+| Drivetrain LR | `LR_Motor` (port 1) | — | goBILDA Yellow Jacket |
+| Drivetrain RF | `RF_Motor` (port 2) | — | goBILDA Yellow Jacket |
+| Drivetrain RR | `RR_Motor` (port 3) | — | goBILDA Yellow Jacket |
 
 **Game-specific mechanisms** (fill in at kickoff — e.g. intake, delivery, lift): add each with
 its config name, port, and the intent-level methods its subsystem exposes. Keep any real mechanism

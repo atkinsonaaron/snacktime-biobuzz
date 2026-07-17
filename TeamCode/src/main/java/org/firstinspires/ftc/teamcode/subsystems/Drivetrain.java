@@ -25,10 +25,10 @@ public class Drivetrain extends SubsystemBase {
     private final MotorEx backRight;
 
     public Drivetrain(HardwareMap hardwareMap) {
-        frontLeft = new MotorEx(hardwareMap, "front_left");
-        frontRight = new MotorEx(hardwareMap, "front_right");
-        backLeft = new MotorEx(hardwareMap, "back_left");
-        backRight = new MotorEx(hardwareMap, "back_right");
+        frontLeft  = new MotorEx(hardwareMap, "LF_Motor");
+        frontRight = new MotorEx(hardwareMap, "RF_Motor");
+        backLeft   = new MotorEx(hardwareMap, "LR_Motor");
+        backRight  = new MotorEx(hardwareMap, "RR_Motor");
 
         // TODO: set directions so +power drives forward on all wheels (typical mecanum below).
         // frontRight.setInverted(true);
