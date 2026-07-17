@@ -24,10 +24,8 @@ public class TuningConfig {
     public static double driveSpeedCap = 1.0;      // 0..1, teleop speed multiplier
     public static double driveSlowModeCap = 0.35;  // 0..1, precision mode multiplier
 
-    // ---- Intake -------------------------------------------------------------------
-    // Active intake: spinning wheels on a SINGLE motor. Powers are 0..1.
-    public static double intakePower = 0.9;   // pulls a game piece IN
-    public static double ejectPower = 0.7;    // pushes a game piece OUT
+    // ---- Game mechanism tunables go here at kickoff --------------------------------
+    // Follow the drivetrain pattern above: public static double, non-final, with units.
 
     // ---- Telemetry ----------------------------------------------------------------
     // Verbose subsystem telemetry is a BENCH tool. Leave OFF for matches so the loop allocates no

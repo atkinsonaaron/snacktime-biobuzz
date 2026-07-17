@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import com.pedropathing.follower.Follower;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.seattlesolvers.solverslib.command.CommandScheduler;
 import com.seattlesolvers.solverslib.gamepad.GamepadEx;
@@ -7,20 +8,17 @@ import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.config.TuningConfig;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.Drivetrain;
-import org.firstinspires.ftc.teamcode.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.util.BulkReads;
 import org.firstinspires.ftc.teamcode.util.LoopTimer;
 import org.firstinspires.ftc.teamcode.util.Persistence;
 
 /**
- * TeleOpExample — gamepad drives the drivetrain; buttons trigger intake commands (CLAUDE.md section 3).
+ * TeleOpExample — field-centric mecanum drive. LEFT_BUMPER = slow mode.
  *
- * Driver-facing telemetry stays MINIMAL and glanceable (sections 4 and 8) — this is the in-match
- * Driver Hub view; heavy debugging data goes to Panels only.
- *
- * NOTE: confirm the SolversLib bindings API against your installed version. The pattern (bind a
- * button edge to a command) is stable and matches FTCLib/WPILib.
+ * Pedro reads the Pinpoint heading and rotates stick inputs to field coordinates each loop.
+ * Driver Hub telemetry is minimal and glanceable (CLAUDE.md sections 4, 8).
  */
 @TeleOp(name = "34672 TeleOp (example)")
 public class TeleOpExample extends CommandOpMode {
@@ -28,8 +26,8 @@ public class TeleOpExample extends CommandOpMode {
     private final LoopTimer loopTimer = new LoopTimer();
     private BulkReads bulkReads;
     private Drivetrain drivetrain;
-    private Intake intake;
     private GamepadEx driver;
+    private Follower follower;
 
     @Override
     public void initialize() {
@@ -37,13 +35,11 @@ public class TeleOpExample extends CommandOpMode {
         bulkReads = new BulkReads(hardwareMap);
 
         drivetrain = new Drivetrain(hardwareMap);
-        intake = new Intake(hardwareMap);
         driver = new GamepadEx(gamepad1);
 
-        // Button bindings -> commands (section 3).
-        driver.getGamepadButton(GamepadKeys.Button.A).whenPressed(intake.intakeCommand());
-        driver.getGamepadButton(GamepadKeys.Button.B).whenPressed(intake.ejectCommand());
-        driver.getGamepadButton(GamepadKeys.Button.X).whenPressed(intake.stopCommand());
+        // Pedro drives the wheels; startTeleopDrive() sets it to open-loop mode (§10).
+        follower = Constants.createFollower(hardwareMap);
+        follower.startTeleopDrive();
 
         Persistence.writeSnapshot(new Persistence.Snapshot()); // safe: init, not the loop (section 7)
         loopTimer.reset();
@@ -59,11 +55,15 @@ public class TeleOpExample extends CommandOpMode {
                 ? TuningConfig.driveSlowModeCap
                 : TuningConfig.driveSpeedCap;
 
-        drivetrain.driveRobot(
-                -driver.getLeftY(),   // forward
-                driver.getLeftX(),    // strafe
-                driver.getRightX(),   // turn
-                cap);
+        // Field-centric: Pedro rotates strafe/forward by the Pinpoint heading before applying power.
+        // Sign convention from PedroTeleOpSample: (-leftY, -leftX, -rightX).
+        // TODO: if a direction is backwards on the robot, flip that sign.
+        follower.setTeleOpDrive(
+                -driver.getLeftY() * cap,
+                -driver.getLeftX() * cap,
+                -driver.getRightX() * cap,
+                false);
+        follower.update();
 
         // Runs the command scheduler + every subsystem's periodic().
         super.run();
@@ -73,15 +73,13 @@ public class TeleOpExample extends CommandOpMode {
         loopTimer.update();
         telemetry.addData("Loop Hz", loopTimer.getHz());
         telemetry.addData("Worst ms", loopTimer.getMaxLoopMs());
-
-        // Minimal driver telemetry (Driver Hub). Only what a driver glances at.
-        telemetry.addData("Intake", intake.getMode());
+        telemetry.addData("Heading °", Math.toDegrees(follower.getPose().getHeading()));
         telemetry.update();
     }
 
     @Override
     public void reset() {
-        intake.stop();
+        follower.breakFollowing();
         drivetrain.stop();
         Persistence.writeSnapshot(new Persistence.Snapshot()); // post-match record (section 7)
         CommandScheduler.getInstance().reset();

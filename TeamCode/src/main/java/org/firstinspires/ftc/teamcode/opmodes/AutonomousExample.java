@@ -6,9 +6,7 @@ import com.seattlesolvers.solverslib.command.CommandScheduler;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
-import org.firstinspires.ftc.teamcode.config.TuningConfig;
 import org.firstinspires.ftc.teamcode.subsystems.Drivetrain;
-import org.firstinspires.ftc.teamcode.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.util.BulkReads;
 import org.firstinspires.ftc.teamcode.util.LoopTimer;
 import org.firstinspires.ftc.teamcode.util.Persistence;
@@ -34,13 +32,11 @@ public class AutonomousExample extends CommandOpMode {
     private final LoopTimer loopTimer = new LoopTimer();
     private BulkReads bulkReads;
     private Drivetrain drivetrain;
-    private Intake intake;
 
     @Override
     public void initialize() {
         bulkReads = new BulkReads(hardwareMap);
         drivetrain = new Drivetrain(hardwareMap);
-        intake = new Intake(hardwareMap);
 
         // TODO: create the Pedro follower and set the starting pose from START_POSE_LABEL.
 
@@ -53,11 +49,8 @@ public class AutonomousExample extends CommandOpMode {
 
     private Command routine() {
         return new SequentialCommandGroup(
-                intake.intakeCommand()
-                // TODO: interleave Pedro path-follow commands — e.g. drive to a game piece while
-                //       intaking = new ParallelCommandGroup(followPath, intake.intakeCommand())
-                ,
-                intake.stopCommand()
+                // TODO: add Pedro path-follow commands and game mechanism commands here.
+                // e.g. new ParallelCommandGroup(followPath, mechanism.collectCommand())
         );
     }
 
@@ -77,7 +70,6 @@ public class AutonomousExample extends CommandOpMode {
 
     @Override
     public void reset() {
-        intake.stop();
         drivetrain.stop();
         Persistence.writeSnapshot(snapshot());   // post-match record (section 7)
         CommandScheduler.getInstance().reset();
@@ -87,9 +79,7 @@ public class AutonomousExample extends CommandOpMode {
         Persistence.Snapshot s = new Persistence.Snapshot();
         s.alliance = ALLIANCE;
         s.startPose = START_POSE_LABEL;
-        s.tuning.put("intakePower", TuningConfig.intakePower);
-        s.tuning.put("ejectPower", TuningConfig.ejectPower);
-        // ...add the rest as you tune
+        // TODO: add tuning values here as you dial them in (CLAUDE.md §7)
         return s;
     }
 }

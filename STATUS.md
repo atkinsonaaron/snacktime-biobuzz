@@ -120,6 +120,13 @@ before doing it, one library at a time, build after each.**
   it from the hub after" — a minor convenience, not a blocker. Use `RobotLog` for all event logging;
   it feeds both Logcat and the RC persistent logs simultaneously.
 
+- **FTC SDK 11.2 — HOLD until Sloth Load is released with Gradle 9.1 support.**
+  11.2 bumps Gradle 8.9 → 9.1 and AGP 8.7.0 → 8.13.2. Sloth's Load plugin 0.2.4 breaks under
+  Gradle 9.1 — the fix is merged (PR #10, May 7, 2026) but not yet released. Upgrading now would
+  lose Sloth hot-reload with no workaround. Watch the Dairy Foundation repo for Load 0.2.5+, then
+  do the upgrade as one coordinated change: Gradle wrapper, AGP classpath, and all 9 SDK deps
+  (11.1.0 → 11.2.0) in the same build. Revisit September 2026.
+
 - **No dependency locking.** There are no lockfiles. The `{strictly X}` markers all over the
   dependency report are **Android Gradle Plugin variant-alignment constraints** — generated *from*
   resolution to keep compile and runtime classpaths aligned, not imposed *on* it. The report's own

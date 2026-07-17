@@ -19,6 +19,10 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-17
+- **Removed intake skeleton; added GameMechanism template.** Deleted `Intake.java`, `IntakeLogic.java`, and `IntakeLogicTest.java` — this robot has no intake hardware. Replaced with `GameMechanism.java`, a blank subsystem template showing the pattern (hardware init, intent-level methods, InstantCommand wrappers, periodic telemetry) to fill in at kickoff. Cleaned all intake references from `AutonomousExample.java` and `TuningConfig.java`. (subsystems/GameMechanism.java, opmodes/AutonomousExample.java, config/TuningConfig.java)
+- **Added field-centric TeleOp drive; removed intake placeholder.** `TeleOpExample` now uses Pedro's `Follower.setTeleOpDrive(forward, strafe, turn, false)` — Pedro reads the Pinpoint heading and rotates stick inputs to field coordinates before applying power. Speed cap and slow-mode (LEFT_BUMPER) still work by pre-scaling inputs. Heading in degrees shown on Driver Hub. Intake subsystem, button bindings, and related code removed — this robot has no intake hardware. Sign convention (`-leftY, -leftX, -rightX`) matches `PedroTeleOpSample`; verify on robot. (opmodes/TeleOpExample.java)
+
 ## 2026-07-16
 - Confirmed hardware: REV Servo Hub added to the hardware map (CLAUDE.md §10); Pinpoint 2.0 confirmed
   as localization source with I2C-port and pod-wiring notes from Pedro's docs. (STATUS.md, CLAUDE.md §10)
@@ -37,6 +41,14 @@ one-command rollback target is easy to find later.
 - Pinned verified versions into the charter's stack section. (CLAUDE.md §2)
 
 ## 2026-07-15
+- **Wired real hardware config names into code.** Updated `Drivetrain.java` motor names to match
+  the RC config (`LF_Motor`, `LR_Motor`, `RF_Motor`, `RR_Motor`). Completed `pedroPathing/Constants.java`
+  which previously called `FollowerBuilder.build()` with no drivetrain or localizer (null crash at
+  runtime) — now wires `mecanumDrivetrain(mecanumConstants)` with the correct motor names/directions
+  and `pinpointLocalizer(pinpointConstants)` with `"pinpoint"` as the I2C config name. Pod offsets
+  (forwardPodY, strafePodX) are still Pedro's placeholder defaults — measure from the robot and
+  update before running the Pedro tuning OpModes. Updated `CLAUDE.md §10` with the real port/name
+  assignments. Build clean. (Drivetrain.java, pedroPathing/Constants.java, CLAUDE.md)
 - **Bumped Pedro Pathing `ftc` from 2.0.6 → 2.1.2.** Brings in the predictive braking algorithm
   (2.1.0), automatic offsets tuner (2.1.0), and heading snap + `isRobotStuck()` fixes (2.1.2).
   `pedroPathing:telemetry` stays at 1.0.0 — confirmed against the official Pedro Quickstart.
