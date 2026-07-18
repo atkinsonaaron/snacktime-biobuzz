@@ -11,7 +11,8 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class Constants {
-    public static FollowerConstants followerConstants = new FollowerConstants();
+    public static FollowerConstants followerConstants = new FollowerConstants()
+            .mass(6.5);
 
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
 
@@ -32,9 +33,12 @@ public class Constants {
     // TODO: measure the pod offsets from the physical robot center and set forwardPodY +
     // strafePodX in inches. Pedro defaults (forwardPodY=1, strafePodX=-2.5) are placeholders
     // — odometry will be inaccurate until these are set to real values.
+    // Pod offsets measured 2026-07-18 via OffsetsTuner (spin 180°).
     public static PinpointConstants pinpointConstants = new PinpointConstants()
             .hardwareMapName("pinpoint")
-            .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+            .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
+            .forwardPodY(6.735)
+            .strafePodX(0.287);
 
     public static Follower createFollower(HardwareMap hardwareMap) {
         return new FollowerBuilder(followerConstants, hardwareMap)

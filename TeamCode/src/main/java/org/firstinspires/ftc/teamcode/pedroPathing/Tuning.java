@@ -51,6 +51,7 @@ public class Tuning extends SelectableOpMode {
         super("Select a Tuning OpMode", s -> {
             s.folder("Localization", l -> {
                 l.add("Localization Test", LocalizationTest::new);
+                l.add("Offsets Tuner", OffsetsTuner::new);
                 l.add("Forward Tuner", ForwardTuner::new);
                 l.add("Lateral Tuner", LateralTuner::new);
                 l.add("Turn Tuner", TurnTuner::new);
@@ -89,6 +90,7 @@ public class Tuning extends SelectableOpMode {
         poseHistory = follower.getPoseHistory();
 
         telemetryM = PanelsTelemetry.INSTANCE.getTelemetry();
+        Drawing.init();
     }
 
     @Override
@@ -153,10 +155,10 @@ class LocalizationTest extends OpMode {
         follower.setTeleOpDrive(-gamepad1.left_stick_y, -gamepad1.left_stick_x, -gamepad1.right_stick_x, true);
         follower.update();
 
-        telemetryM.debug("x:" + follower.getPose().getX());
-        telemetryM.debug("y:" + follower.getPose().getY());
-        telemetryM.debug("heading:" + follower.getPose().getHeading());
-        telemetryM.debug("total heading:" + follower.getTotalHeading());
+        telemetryM.debug(String.format("x: %.3f", follower.getPose().getX()));
+        telemetryM.debug(String.format("y: %.3f", follower.getPose().getY()));
+        telemetryM.debug(String.format("heading: %.3f deg", Math.toDegrees(follower.getPose().getHeading())));
+        telemetryM.debug(String.format("total heading: %.3f deg", Math.toDegrees(follower.getTotalHeading())));
         telemetryM.update(telemetry);
 
         drawCurrentAndHistory();
@@ -1178,6 +1180,42 @@ class Circle extends OpMode {
 }
 
 /**
+ * Spins the robot 180° and calculates forwardPodY and strafePodX offsets for the Pinpoint localizer.
+ * Prerequisite: both offsets must be set to 0 in Constants.java before running.
+ * After running, enter the telemetered values as forwardPodY and strafePodX in Constants.java.
+ *
+ * @author Havish Sripada - 12808 RevAmped Robotics
+ * @author Baron Henderson - 20077 The Indubitables
+ */
+class OffsetsTuner extends OpMode {
+    @Override
+    public void init() {
+        follower.setStartingPose(new Pose(72, 72));
+        follower.update();
+        drawCurrent();
+    }
+
+    @Override
+    public void init_loop() {
+        telemetryM.debug("Prerequisite: both offsets must be 0 in Constants.java PinpointConstants.");
+        telemetryM.debug("Spin the robot " + Math.PI + " radians (180°). Offsets appear in telemetry.");
+        telemetryM.update(telemetry);
+        drawCurrent();
+    }
+
+    @Override
+    public void loop() {
+        follower.update();
+        telemetryM.debug("Total Angle: " + follower.getTotalHeading());
+        telemetryM.debug("Enter these values into Constants.java after tuning:");
+        telemetryM.debug("strafePodX: " + ((72.0 - follower.getPose().getX()) / 2.0));
+        telemetryM.debug("forwardPodY: " + ((72.0 - follower.getPose().getY()) / 2.0));
+        telemetryM.update(telemetry);
+        drawCurrentAndHistory();
+    }
+}
+
+/**
  * This is the Drawing class. It handles the drawing of stuff on Panels Dashboard, like the robot.
  *
  * @author Lazar - 19234
@@ -1188,10 +1226,10 @@ class Drawing {
     private static final FieldManager panelsField = PanelsField.INSTANCE.getField();
 
     private static final Style robotLook = new Style(
-            "", "#3F51B5", 0.0
+            "", "#FF0000", 2.0
     );
     private static final Style historyLook = new Style(
-            "", "#4CAF50", 0.0
+            "", "#4CAF50", 1.5
     );
 
     /**
