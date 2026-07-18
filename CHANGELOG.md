@@ -19,6 +19,9 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-18 (continued, third pass)
+- **Snapshot now captures real battery voltage and port info per device.** Battery voltage was always 0.0 because the voltage sensor isn't ready during OpMode init — fixed by reading it on the first loop tick instead, storing it as a field, and using that in the stop snapshot. Hardware map in the snapshot now shows which port each device is on (e.g. `"LF_Motor": "port 0"`) instead of just the name, so the snapshot doubles as a wiring record. (`util/Persistence.java`, `opmodes/TeleOpExample.java`, `opmodes/AutonomousExample.java`)
+
 ## 2026-07-18 (continued, second pass)
 - **Added tuning backup: save on stop, load on init.** `Persistence.saveTuning()` writes every TuningConfig value (including dashboard-modified values) to `current_tuning.json` on the hub. `Persistence.loadAndApplyTuning(telemetry)` reads it back and applies values to the live TuningConfig statics via reflection — dashboard values supersede source defaults automatically. All three OpModes wired: load at init, save at stop. Driver Hub shows `LOADED TUNING FROM FILE (timestamp)` whenever a file is found. Survives robot restarts and code hot-reloads; a hub re-flash wipes the file (git is the disaster backup — grep `SNAPSHOT:` in the RC log after any session and paste values back to `TuningConfig.java`). (`util/Persistence.java`, `opmodes/TeleOpExample.java`, `opmodes/AutonomousExample.java`, `opmodes/SystemsCheck.java`)
 
