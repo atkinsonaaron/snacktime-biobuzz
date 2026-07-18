@@ -41,6 +41,7 @@ public class AutonomousExample extends CommandOpMode {
     private String selectedStartPose = "UNKNOWN";
     private String selectedField = "UNKNOWN";
     private int selectedDelaySeconds = 0;
+    private double startBatteryVolts = 0.0;
 
     @Override
     public void initialize() {
@@ -113,6 +114,7 @@ public class AutonomousExample extends CommandOpMode {
     public void run() {
         // RULE 1, NON-NEGOTIABLE: clear the bulk cache FIRST, every loop, always (§4).
         bulkReads.clear();
+        if (startBatteryVolts == 0.0) startBatteryVolts = Persistence.readBatteryVolts(hardwareMap);
 
         super.run(); // command scheduler + subsystem periodics (incl. DiagnosticsCenter)
 
@@ -137,6 +139,7 @@ public class AutonomousExample extends CommandOpMode {
         Persistence.Snapshot s = new Persistence.Snapshot();
         s.alliance = selectedAlliance;
         s.startPose = selectedStartPose;
+        s.startingBatteryVolts = startBatteryVolts;
         // TODO: add tuning values here as you dial them in (CLAUDE.md §7)
         return s;
     }

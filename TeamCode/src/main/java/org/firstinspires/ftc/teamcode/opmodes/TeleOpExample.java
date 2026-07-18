@@ -28,6 +28,7 @@ public class TeleOpExample extends CommandOpMode {
     private Drivetrain drivetrain;
     private GamepadEx driver;
     private Follower follower;
+    private double startBatteryVolts = 0.0;
 
     @Override
     public void initialize() {
@@ -50,6 +51,7 @@ public class TeleOpExample extends CommandOpMode {
     public void run() {
         // RULE 1, NON-NEGOTIABLE: clear the bulk cache FIRST, every loop, always (section 4).
         bulkReads.clear();
+        if (startBatteryVolts == 0.0) startBatteryVolts = Persistence.readBatteryVolts(hardwareMap);
 
         // Read -> process -> write (section 4, rule 2).
         double cap = driver.getButton(GamepadKeys.Button.LEFT_BUMPER)
@@ -88,7 +90,9 @@ public class TeleOpExample extends CommandOpMode {
         follower.breakFollowing();
         drivetrain.stop();
         Persistence.saveTuning();
-        Persistence.writeSnapshot(new Persistence.Snapshot(), hardwareMap); // post-match record (section 7)
+        Persistence.Snapshot stopSnap = new Persistence.Snapshot();
+        stopSnap.startingBatteryVolts = startBatteryVolts;
+        Persistence.writeSnapshot(stopSnap, hardwareMap); // post-match record (section 7)
         CommandScheduler.getInstance().reset();
     }
 }

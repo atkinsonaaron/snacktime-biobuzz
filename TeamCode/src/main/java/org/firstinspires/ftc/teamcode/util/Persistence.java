@@ -15,6 +15,8 @@ import com.qualcomm.robotcore.util.ReadWriteFile;
 import org.firstinspires.ftc.teamcode.config.TuningConfig;
 import org.firstinspires.ftc.teamcode.hardware.BuildInfo;
 
+import com.qualcomm.robotcore.hardware.VoltageSensor;
+
 import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -74,8 +76,9 @@ public final class Persistence {
         public boolean systemsCheckPassed   = false;
         public List<String> systemsCheckNotes = new ArrayList<>();
 
-        // All device names from the RC hardware config — auto-captured when hardwareMap is passed.
-        public List<String> hardware = new ArrayList<>();
+        // All devices from the RC hardware config: name → connection info (port/bus).
+        // getConnectionInfo() is standard FTC SDK API on every HardwareDevice.
+        public Map<String, String> hardware = new LinkedHashMap<>();
 
         // All TuningConfig values at the time of the write — auto-captured via reflection.
         public Map<String, Object> tuning = new LinkedHashMap<>();
@@ -181,9 +184,17 @@ public final class Persistence {
         try {
             List<String> names = new ArrayList<>(hwMap.getAllNames(HardwareDevice.class));
             Collections.sort(names);
-            snap.hardware = names;
+            for (String name : names) {
+                String info;
+                try {
+                    info = parseConnectionInfo(hwMap.get(HardwareDevice.class, name).getConnectionInfo());
+                } catch (Throwable t) {
+                    info = "unknown";
+                }
+                snap.hardware.put(name, info);
+            }
         } catch (Throwable t) {
-            snap.hardware.add("ERROR enumerating hardware: " + t.getMessage());
+            snap.hardware.put("ERROR", "failed to enumerate: " + t.getMessage());
         }
     }
 
@@ -211,6 +222,25 @@ public final class Persistence {
         } else if (type == int.class || type == Integer.class) {
             f.set(null, ((Number) val).intValue());
         }
+    }
+
+    /** Extracts "port X" from raw SDK connection strings like "USB (embedded); module 173; port 0". */
+    static String parseConnectionInfo(String raw) {
+        if (raw == null) return "unknown";
+        for (String part : raw.split(";")) {
+            String trimmed = part.trim();
+            if (trimmed.startsWith("port ")) return trimmed;
+        }
+        return raw.trim(); // fallback: return as-is if no port segment found
+    }
+
+    /** Reads the first voltage sensor safely; returns 0.0 if none found or read fails. */
+    public static double readBatteryVolts(HardwareMap hardwareMap) {
+        try {
+            java.util.Iterator<VoltageSensor> it = hardwareMap.voltageSensor.iterator();
+            if (it.hasNext()) return it.next().getVoltage();
+        } catch (Throwable ignored) {}
+        return 0.0;
     }
 
     private Persistence() { }
