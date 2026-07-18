@@ -16,6 +16,13 @@ apply from: '../build.common.gradle'
 apply from: '../build.dependencies.gradle'
 apply plugin: 'dev.frozenmilk.sinister.sloth.load'
 
+// Computed once at the top level so both the android block and generateBuildManifest can use them.
+def gitHash = "unknown"
+try {
+    gitHash = 'git rev-parse --short HEAD'.execute([], project.rootDir).text.trim()
+} catch (ignored) { }
+def buildTime = new Date().format("yyyy-MM-dd'T'HH:mm:ss")
+
 android {
     namespace = 'org.firstinspires.ftc.teamcode'
 
@@ -25,12 +32,6 @@ android {
 
     // Traceability: stamp git hash + build time into BuildConfig so every JSON snapshot
     // (util/Persistence.java, hardware/BuildInfo.java) points back to exact source (CLAUDE.md §7, §12).
-    def gitHash = "unknown"
-    try {
-        gitHash = 'git rev-parse --short HEAD'.execute([], project.rootDir).text.trim()
-    } catch (ignored) { }
-    def buildTime = new Date().format("yyyy-MM-dd'T'HH:mm:ss")
-
     defaultConfig {
         buildConfigField "String", "GIT_HASH", "\"${gitHash}\""
         buildConfigField "String", "BUILD_TIME", "\"${buildTime}\""
@@ -44,6 +45,71 @@ android {
         unitTests.returnDefaultValues = true
     }
 }
+
+// Build-time manifest — generated on every build (hot-reload or full install) so you always have
+// a local record of what was deployed without needing the robot or ADB.
+// Output: build-manifest.json at the repo root. Open it in any editor; grep it from Terminal.
+// Hardware names are scanned from source automatically — no manual list to maintain.
+// TuningConfig defaults are parsed from source so the file reflects the code, not a stale copy.
+task generateBuildManifest {
+    def outputFile  = file("${rootDir}/build-manifest.json")
+    def srcDir      = file("${projectDir}/src/main/java/org/firstinspires/ftc/teamcode")
+    def tuningSource = file("${srcDir}/config/TuningConfig.java")
+
+    inputs.dir  srcDir
+    outputs.file outputFile
+
+    doLast {
+        // --- Hardware: scan all .java files for RC config name strings ---
+        // Patterns covered:
+        //   new MotorEx(hardwareMap, "LF_Motor")       — subsystem constructors
+        //   .hardwareMapName("pinpoint")               — Pedro builder
+        //   hardwareMap.get(DcMotorEx.class, "name")  — direct get with type
+        //   hardwareMap.get("name")                    — direct get without type
+        def hardware = new TreeSet<String>()
+        srcDir.eachFileRecurse(groovy.io.FileType.FILES) { f ->
+            if (!f.name.endsWith('.java')) return
+            f.eachLine { line ->
+                def code = line.replaceAll('//.*', '') // strip line comments
+                [
+                    (code =~ /\w+\(hardwareMap,\s*"([^"]+)"/),          // ctor(hardwareMap, "name")
+                    (code =~ /\.hardwareMapName\("([^"]+)"\)/),          // .hardwareMapName("name")
+                    (code =~ /hardwareMap\.get\([^"]*"([^"]+)"/),        // hardwareMap.get(..., "name")
+                ].each { m -> if (m) hardware << m[0][1] }
+            }
+        }
+
+        // --- TuningConfig: parse default values for every public static field ---
+        def tuning = [:]
+        tuningSource.eachLine { line ->
+            def m = (line =~ /public static (?:double|boolean|long|int) (\w+)\s*=\s*([^;\/]+)/)
+            if (m) {
+                def name = m[0][1].trim()
+                def raw  = m[0][2].trim()
+                if (raw == 'true' || raw == 'false') {
+                    tuning[name] = (raw == 'true')
+                } else if (raw.endsWith('L') || raw.endsWith('l')) {
+                    try { tuning[name] = raw[0..-2].toLong() } catch (ignored) { tuning[name] = raw }
+                } else {
+                    try { tuning[name] = raw.toDouble() } catch (ignored) { tuning[name] = raw }
+                }
+            }
+        }
+
+        def manifest = [
+            gitHash  : gitHash,
+            buildTime: buildTime,
+            hardware : hardware.toList(),
+            tuning   : tuning,
+        ]
+
+        outputFile.text = groovy.json.JsonOutput.prettyPrint(
+                groovy.json.JsonOutput.toJson(manifest))
+        logger.lifecycle("Build manifest → ${outputFile}")
+    }
+}
+
+preBuild.dependsOn generateBuildManifest
 
 repositories {
     maven {

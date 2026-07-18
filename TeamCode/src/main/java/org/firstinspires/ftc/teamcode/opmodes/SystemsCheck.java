@@ -23,12 +23,16 @@ import java.util.List;
 @TeleOp(name = "34672 Systems Check", group = "diagnostics")
 public class SystemsCheck extends LinearOpMode {
 
+    // Names must match the Robot Controller configuration exactly (CLAUDE.md §10).
+    // Add game-mechanism motors here when they are wired and configured.
     private static final String[] MOTOR_NAMES = {
-            "front_left", "front_right", "back_left", "back_right", "intake_motor"
+            "LF_Motor", "LR_Motor", "RF_Motor", "RR_Motor"
     };
 
     @Override
     public void runOpMode() {
+        Persistence.loadAndApplyTuning(telemetry);
+
         List<String> notes = new ArrayList<>();
         boolean passed = true;
 
@@ -70,7 +74,7 @@ public class SystemsCheck extends LinearOpMode {
         snap.systemsCheckPassed = passed;
         snap.systemsCheckNotes = notes;
         snap.startingBatteryVolts = volts;
-        Persistence.writeSnapshot(snap);
+        Persistence.writeSnapshot(snap, hardwareMap);
 
         waitForStart();
         if (!opModeIsActive()) return;
@@ -94,5 +98,6 @@ public class SystemsCheck extends LinearOpMode {
 
         telemetry.addLine("Systems check complete.");
         telemetry.update();
+        Persistence.saveTuning();
     }
 }

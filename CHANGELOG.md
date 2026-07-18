@@ -19,6 +19,23 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-18 (continued, second pass)
+- **Added tuning backup: save on stop, load on init.** `Persistence.saveTuning()` writes every TuningConfig value (including dashboard-modified values) to `current_tuning.json` on the hub. `Persistence.loadAndApplyTuning(telemetry)` reads it back and applies values to the live TuningConfig statics via reflection — dashboard values supersede source defaults automatically. All three OpModes wired: load at init, save at stop. Driver Hub shows `LOADED TUNING FROM FILE (timestamp)` whenever a file is found. Survives robot restarts and code hot-reloads; a hub re-flash wipes the file (git is the disaster backup — grep `SNAPSHOT:` in the RC log after any session and paste values back to `TuningConfig.java`). (`util/Persistence.java`, `opmodes/TeleOpExample.java`, `opmodes/AutonomousExample.java`, `opmodes/SystemsCheck.java`)
+
+---
+
+## 2026-07-18 (continued)
+- **Build-time manifest generated on every build.** A `generateBuildManifest` Gradle task (wired to `preBuild`) writes `build-manifest.json` at the repo root every time code is deployed — hot-reload or full install. Contains git hash, build time, all TuningConfig default values parsed from source, and hardware device names scanned automatically from the teamcode source (catches `new MotorEx(hardwareMap, "name")`, `.hardwareMapName("name")`, and `hardwareMap.get(Class, "name")` patterns — no manual list). No robot or ADB needed; the file is on your Mac immediately after any build. `build-manifest.json` is gitignored. (TeamCode/build.gradle, .gitignore)
+- **Snapshot now auto-captures all hardware devices and TuningConfig values.** `writeSnapshot(snap, hardwareMap)` enumerates every configured device from the RC hardware map via `getAllNames(HardwareDevice.class)` — motors, servos, sensors — sorted alphabetically so diffs are stable. TuningConfig values are captured via reflection so new tunables appear automatically with no Persistence change. The full JSON is emitted via `RobotLog.i("SNAPSHOT:…")` so it appears in `robotControllerLog.txt` (grep `SNAPSHOT:`) without needing ADB file access. All three OpModes updated to pass `hardwareMap`. (`util/Persistence.java`, `opmodes/SystemsCheck.java`, `opmodes/TeleOpExample.java`, `opmodes/AutonomousExample.java`)
+
+---
+
+## 2026-07-18
+- **Fixed SystemsCheck motor names** — updated from stale placeholder names (`front_left` etc.) to the correct RC config names (`LF_Motor`, `LR_Motor`, `RF_Motor`, `RR_Motor`); removed non-existent `intake_motor` so the check runs 4 motors instead of 5. Add mechanism motors back here once they are wired and in the RC config.
+- **Deleted Pedro quickstart samples** (`samples/PedroAutoSample`, `PedroTeleOpSample`, `PedroCommands`) — they crashed Sinister's `OnCreateMenuScanner` at app startup. Root cause: both TeleOp and Auto samples used `new TelemetryData(telemetry)` as an instance field initializer; `telemetry` is null at construction time in FTC (set by the framework after the constructor), so Sinister NPE'd when it instantiated the classes to build the Driver Hub menu. These were placeholder quickstart samples, confirmed safe to delete per STATUS.md.
+
+---
+
 ## 2026-07-17
 - **Incorporated 11 patterns from FTC 5327's decode-2025.** After comparing their codebase against ours (they run the same stack: SolversLib + Pedro + Sloth + Panels), we pulled in what fills real gaps and skipped what duplicates SolversLib primitives or breaks our layer boundaries. Everything went into teamcode (Tier 2 hot-reload). Ports:
   - **Auto command trees, unblocked.** `commands/FollowPathCommand.java` wraps Pedro's `follower.followPath()` as a proper `CommandBase` so autos compose as a plan instead of a hand-rolled state machine (§3). Credit: Powercube from Watt-sUP 16166 via decode-2025.

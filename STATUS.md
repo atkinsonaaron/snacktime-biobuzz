@@ -1,6 +1,6 @@
 # STATUS.md — where this project actually is
 
-**Last updated:** 2026-07-17 — Phase 0 mostly proven; 11 patterns ported from decode-2025; Explain-It Gate relaxed.
+**Last updated:** 2026-07-18 — Sinister crash fixed; SystemsCheck corrected; full persistence + tuning backup system built.
 
 **Read `CLAUDE.md` first** — that's the charter (rules + architecture) and it governs everything.
 This file is only the *current state*: what's verified, what's left, and what to do next. Keep it
@@ -34,6 +34,10 @@ of checking. Verify, don't assume.
 - **HeadingCorrector**: opt-in PIDF heading hold (disabled by default; enable via
   `TuningConfig.headingCorrectionEnabled`)
 - **Servos**: `ServoUtil.degreesToPositionClamped(deg, min, max, range)` — soft limits + degrees API
+- **Tuning backup**: `Persistence.saveTuning()` / `loadAndApplyTuning(telemetry)` — dashboard
+  values saved on every stop, restored on every init; Driver Hub shows `LOADED TUNING FROM FILE`
+- **Build manifest**: `build-manifest.json` written at repo root on every build (Gradle task) —
+  hardware names scanned from source automatically, TuningConfig source defaults included
 - **Small utilities ready as needed**: `JoystickCurve`, `SlewRateLimiter`, `Profiler`,
   `StaleWatcher`, `AsymmetricMotionProfile`
 
@@ -76,6 +80,38 @@ Two proofs remain before Phase 0 is fully verified. Both need the robot in front
 
 **Pre-season opportunity:** order Pollen from AndyMark and build the goBILDA StarterBot Base so
 Phase 0 can prove itself against real game pieces before the September 12, 2026 kickoff.
+
+---
+
+## Recent significant additions (2026-07-18, second session)
+
+- **Tuning backup system** — `Persistence.saveTuning()` writes all TuningConfig values (including
+  dashboard-modified ones) to `current_tuning.json` on the hub on every OpMode stop.
+  `loadAndApplyTuning(telemetry)` reads and applies them on every OpMode init via reflection;
+  dashboard values supersede source defaults. All three OpModes wired.
+  Disaster backup: `grep "SNAPSHOT:" robotControllerLog.txt` after any session for a full JSON
+  of runtime values → paste into `TuningConfig.java` → commit.
+
+- **Build-time manifest** — `generateBuildManifest` Gradle task (wired to `preBuild`) writes
+  `build-manifest.json` at repo root on every build. Hardware names scanned automatically from
+  teamcode source; TuningConfig source defaults parsed from source. No robot or ADB needed.
+  Gitignored. Requires Gradle sync (Android Studio "Sync Now" banner).
+
+- **Snapshot improvements** — `writeSnapshot(snap, hardwareMap)` now enumerates all configured
+  devices via `getAllNames(HardwareDevice.class)` and captures all TuningConfig values via
+  reflection. Full JSON also logged via RobotLog (`SNAPSHOT:` tag) so it's in the downloaded
+  RC log without ADB file hunting.
+
+---
+
+## Recent significant additions (2026-07-18)
+
+- **Deleted Pedro quickstart samples** — `PedroAutoSample`, `PedroTeleOpSample`, `PedroCommands`
+  were crashing Sinister's `OnCreateMenuScanner` at app startup. Both TeleOp and Auto samples used
+  `new TelemetryData(telemetry)` as an instance field initializer; in FTC, `telemetry` is null at
+  construction time (set by the framework only after the constructor), so Sinister NPE'd when it
+  tried to instantiate the classes to build the Driver Hub menu.
+  **Deploy:** hot-reload (Sloth) should suffice; if the crashed menu persists, do a full install.
 
 ---
 
@@ -181,8 +217,6 @@ Phase 0 can prove itself against real game pieces before the September 12, 2026 
   `JoystickCurve`, `Profiler`, `SlewRateLimiter`, `StaleWatcher`, `TelemetryMenu`
 - `util/profile/` — `AsymmetricMotionProfile`, `ProfileConstraints`, `ProfileState`
 - `pedroPathing/` — `Constants`, `Tuning` (from Quickstart; edited by us — `Pinpoint` wired in)
-- `samples/` — `PedroCommands`, `PedroAutoSample`, `PedroTeleOpSample` (from Quickstart; safe to
-  delete once real code exists — they only clutter the Driver Hub OpMode list)
 
 **Off-robot tests** in `TeamCode/src/test/java/.../logic/`:
 `JoystickCurveTest`, `SlewRateLimiterTest`, `StaleWatcherTest`, `AsymmetricMotionProfileTest`,
@@ -244,9 +278,13 @@ Managed via `claude.ai/code/routines`:
   they can handle sophisticated patterns — but when they don't understand something, teach them,
   don't strip it out.
 - **Recent commits** worth being aware of:
+  - `cec88c5` — STATUS.md refreshed as self-contained handoff doc
   - `bb096bb` — 11 patterns ported from decode-2025; Explain-It Gate relaxed
   - `1cb8f1f` — drive deadzone; fixed stray `do` token in build.gradle; Sloth marked proven
-  - `e4fe17a` — Sloth Load first working
-  - `ede6404` — field-centric TeleOp; intake skeleton replaced with `GameMechanism` template
-- **git is on `master`, tracking `origin/master`, clean.** All commits pushed as of handoff.
+- **Uncommitted work from 2026-07-18 session** (not yet committed — Aaron controls when):
+  - Sinister crash fix: deleted Pedro quickstart samples
+  - SystemsCheck: corrected motor names, 5→4 motors
+  - Persistence: saveTuning, loadAndApplyTuning, hardware enumeration, RobotLog SNAPSHOT
+  - TeamCode/build.gradle: generateBuildManifest task + Gradle sync needed
+  - .gitignore: build-manifest.json added
 - **Do not commit unless asked.** Aaron controls when commits happen.

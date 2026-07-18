@@ -33,6 +33,7 @@ public class TeleOpExample extends CommandOpMode {
     public void initialize() {
         // MANUAL bulk caching — the biggest lever on loop time (section 0, section 4 rule 1).
         bulkReads = new BulkReads(hardwareMap);
+        Persistence.loadAndApplyTuning(telemetry);
 
         drivetrain = new Drivetrain(hardwareMap);
         driver = new GamepadEx(gamepad1);
@@ -41,7 +42,7 @@ public class TeleOpExample extends CommandOpMode {
         follower = Constants.createFollower(hardwareMap);
         follower.startTeleopDrive();
 
-        Persistence.writeSnapshot(new Persistence.Snapshot()); // safe: init, not the loop (section 7)
+        Persistence.writeSnapshot(new Persistence.Snapshot(), hardwareMap); // safe: init, not the loop (section 7)
         loopTimer.reset();
     }
 
@@ -86,7 +87,8 @@ public class TeleOpExample extends CommandOpMode {
     public void reset() {
         follower.breakFollowing();
         drivetrain.stop();
-        Persistence.writeSnapshot(new Persistence.Snapshot()); // post-match record (section 7)
+        Persistence.saveTuning();
+        Persistence.writeSnapshot(new Persistence.Snapshot(), hardwareMap); // post-match record (section 7)
         CommandScheduler.getInstance().reset();
     }
 }

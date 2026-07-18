@@ -172,7 +172,7 @@ math. Every OpMode loop:
    when you need to watch a subsystem's health (§5). Loop-time itself is always telemetered via
    the `LoopTimer` utility, passing numbers rather than hand-built strings.
 
----
+---adb
 
 ## 5. Reliability & safety rules
 

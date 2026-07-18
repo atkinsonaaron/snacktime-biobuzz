@@ -46,6 +46,7 @@ public class AutonomousExample extends CommandOpMode {
     public void initialize() {
         // Hardware first, so the menu can render while init is running.
         bulkReads = new BulkReads(hardwareMap);
+        Persistence.loadAndApplyTuning(telemetry);
         drivetrain = new Drivetrain(hardwareMap);
         menu = new AutonMenu(telemetry);
 
@@ -90,7 +91,7 @@ public class AutonomousExample extends CommandOpMode {
                 selectedAlliance, selectedStartPose, selectedField, selectedDelaySeconds,
                 tweaks.xOffsetInches, tweaks.yOffsetInches, tweaks.headingOffsetDeg);
 
-        Persistence.writeSnapshot(snapshot()); // AUTO-EXPORT on init is safe (§7)
+        Persistence.writeSnapshot(snapshot(), hardwareMap); // AUTO-EXPORT on init is safe (§7)
 
         // The whole autonomous, as a composed command tree. No switch statement.
         Command routine = routine();
@@ -127,7 +128,8 @@ public class AutonomousExample extends CommandOpMode {
     @Override
     public void reset() {
         drivetrain.stop();
-        Persistence.writeSnapshot(snapshot()); // post-match record (§7)
+        Persistence.saveTuning();
+        Persistence.writeSnapshot(snapshot(), hardwareMap); // post-match record (§7)
         CommandScheduler.getInstance().reset();
     }
 
