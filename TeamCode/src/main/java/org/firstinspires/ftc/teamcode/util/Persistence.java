@@ -13,6 +13,7 @@ import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import com.qualcomm.robotcore.util.ReadWriteFile;
 import org.firstinspires.ftc.teamcode.config.TuningConfig;
+import org.firstinspires.ftc.teamcode.subsystems.Drivetrain;
 import org.firstinspires.ftc.teamcode.hardware.BuildInfo;
 
 import com.qualcomm.robotcore.hardware.VoltageSensor;
@@ -62,8 +63,9 @@ public final class Persistence {
     // KICKOFF: add each new @Configurable subsystem class here, e.g. GameMechanism.class.
     // Keys in the JSON are namespaced "ClassName.fieldName" to avoid collisions.
     private static final List<Class<?>> TUNING_CLASSES = Arrays.asList(
-            TuningConfig.class
-            // e.g., GameMechanism.class
+            TuningConfig.class,
+            Drivetrain.class
+            // KICKOFF: add each new @Configurable subsystem class here, e.g. GameMechanism.class.
     );
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();

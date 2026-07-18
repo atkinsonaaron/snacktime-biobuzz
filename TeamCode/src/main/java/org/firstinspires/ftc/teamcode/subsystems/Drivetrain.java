@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
@@ -16,7 +17,24 @@ import org.firstinspires.ftc.teamcode.config.TuningConfig;
  *
  * The Pinpoint is I2C — read it ONCE per loop at the OpMode level, never here (section 4, rule 5).
  */
+@Configurable
 public class Drivetrain extends SubsystemBase {
+
+    // ---- Tunables (Panels live-editable, §6 Tier 1) ----------------------------------------
+    public static double driveSpeedCap    = 1.0;   // 0..1, teleop full-speed multiplier
+    public static double driveSlowModeCap = 0.35;  // 0..1, precision mode multiplier
+    public static double driveDeadzone    = 0.05;  // stick inputs below this are zeroed
+
+    // Heading-hold PIDF for TeleOp — resists drift when driver isn't turning.
+    // TUNE ORDER: enable, raise headingP until it resists; add headingD if it oscillates; leave headingI at 0.
+    public static boolean headingCorrectionEnabled    = false;
+    public static double  headingNominalVoltage       = 12.4;  // voltage-compensate gains
+    public static double  headingCorrectionThresholdMin = 0.05; // ignore corrections smaller than this
+    public static double  headingCorrectionLagMs      = 200;   // ms to wait after stick release before engaging
+    public static double  headingP = 1.2;
+    public static double  headingI = 0;
+    public static double  headingD = 500;
+    public static double  headingF = 0;
 
     // Config names must match the Robot Controller configuration (section 10).
     private final MotorEx frontLeft;
@@ -64,7 +82,7 @@ public class Drivetrain extends SubsystemBase {
 
     /** Convenience overload using the standard speed cap. */
     public void driveRobot(double drive, double strafe, double turn) {
-        driveRobot(drive, strafe, turn, TuningConfig.driveSpeedCap);
+        driveRobot(drive, strafe, turn, driveSpeedCap);
     }
 
     public void stop() {

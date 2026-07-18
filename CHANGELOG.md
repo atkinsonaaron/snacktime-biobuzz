@@ -19,6 +19,9 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-18 (continued, sixth pass)
+- **Drivetrain tunables moved from TuningConfig into Drivetrain.java.** Speed caps, deadzone, and all heading-correction PIDF values are now public static fields at the top of the Drivetrain subsystem file, grouped under "Drivetrain" in Panels. TuningConfig now holds only the three cross-cutting flags (verboseTelemetry, diagnosticsProblemExpireSeconds, profilerEnabled). Persistence updated to scan both classes. References in TeleOpExample and HeadingCorrector updated to point to Drivetrain. (`subsystems/Drivetrain.java`, `config/TuningConfig.java`, `util/Persistence.java`, `util/HeadingCorrector.java`, `opmodes/TeleOpExample.java`)
+
 ## 2026-07-18 (continued, fifth pass)
 - **Mechanism tunables now live in the subsystem file, not TuningConfig.** Each `@Configurable` subsystem class holds its own `public static` fields so Panels groups them by mechanism name. `Persistence` now scans a `TUNING_CLASSES` registry (namespaced `ClassName.fieldName` keys) instead of only `TuningConfig`, so all registered mechanism values are included in session persistence. `GameMechanism.java` updated as the template. CLAUDE.md §6 and TuningConfig updated so the rule is documented for kickoff. (`util/Persistence.java`, `subsystems/GameMechanism.java`, `config/TuningConfig.java`, `CLAUDE.md`)
 

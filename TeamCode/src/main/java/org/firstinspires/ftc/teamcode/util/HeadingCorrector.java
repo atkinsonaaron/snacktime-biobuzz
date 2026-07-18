@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.RobotLog;
 import com.seattlesolvers.solverslib.controller.PIDFController;
 
-import org.firstinspires.ftc.teamcode.config.TuningConfig;
+import org.firstinspires.ftc.teamcode.subsystems.Drivetrain;
 
 /**
  * HeadingCorrector — optional PIDF heading-hold for field-centric TeleOp.
@@ -31,14 +31,14 @@ import org.firstinspires.ftc.teamcode.config.TuningConfig;
  *       follower.getPose().getHeading(), turnCommand, batteryVoltage);
  *   follower.setTeleOpDrive(forward, strafe, correctedTurn, false);
  *
- * TUNE ORDER: enable with `TuningConfig.headingCorrectionEnabled = true`. Bump `headingP` until
+ * TUNE ORDER: enable with `Drivetrain.headingCorrectionEnabled = true`. Bump `headingP` until
  * the robot resists rotation. If it oscillates, add `headingD` to damp it. Leave I at 0 unless
  * you see steady-state drift.
  *
  * Ported from FTC 5327 SMS Robotics' decode-2025 (common/drive/HeadingCorrector.java). Adapted:
- * - Removed the inner `Config` static class; values live in `TuningConfig` so they're live-editable
+ * - Removed the inner `Config` static class; values live in `Drivetrain` so they're live-editable on Panels
  * - Fixed the "supressed" spelling to "suppressed"
- * - Reads `TuningConfig` fields directly each call — they're Tier-1 configurables, cheap boolean/double reads
+ * - Reads `Drivetrain` fields directly each call — they're Tier-1 configurables, cheap boolean/double reads
  */
 public class HeadingCorrector {
 
@@ -54,8 +54,8 @@ public class HeadingCorrector {
     }
 
     private void applyGains() {
-        hController.setPIDF(TuningConfig.headingP, TuningConfig.headingI,
-                TuningConfig.headingD, TuningConfig.headingF);
+        hController.setPIDF(Drivetrain.headingP, Drivetrain.headingI,
+                Drivetrain.headingD, Drivetrain.headingF);
     }
 
     public double getTargetHeading() {
@@ -94,7 +94,7 @@ public class HeadingCorrector {
      * @return turn command with any heading correction added in
      */
     public double correctHeading(double currentRobotHeading, double turnSpeed, double voltage) {
-        if (TuningConfig.headingCorrectionEnabled && !suppressed) {
+        if (Drivetrain.headingCorrectionEnabled && !suppressed) {
             if (Math.abs(turnSpeed) > 0) {
                 // Driver is actively turning — track the current heading as the new target and
                 // hold off correction until they release.
@@ -102,7 +102,7 @@ public class HeadingCorrector {
                 lagTimer.reset();
             }
 
-            if (lagTimer.milliseconds() > TuningConfig.headingCorrectionLagMs) {
+            if (lagTimer.milliseconds() > Drivetrain.headingCorrectionLagMs) {
                 double headingCorrection = computeCorrection(currentRobotHeading, voltage);
                 turnSpeed += headingCorrection;
             } else {
@@ -117,15 +117,15 @@ public class HeadingCorrector {
         double error = normalizeRadians(normalizeRadians(targetHeading) - normalizeRadians(currentRobotHeading));
         // Voltage-compensate: as battery drops, we ask for proportionally more correction to
         // achieve the same physical response.
-        error *= TuningConfig.headingNominalVoltage > 0
-                ? (TuningConfig.headingNominalVoltage / voltage) : 1;
+        error *= Drivetrain.headingNominalVoltage > 0
+                ? (Drivetrain.headingNominalVoltage / voltage) : 1;
 
         // Re-read gains each call so live edits from Panels take effect without restart.
         applyGains();
         double headingCorrection = hController.calculate(0, error);
 
         // Ignore tiny corrections — avoids twitchy behavior when heading is essentially on-target.
-        if (Math.abs(headingCorrection) < TuningConfig.headingCorrectionThresholdMin) {
+        if (Math.abs(headingCorrection) < Drivetrain.headingCorrectionThresholdMin) {
             headingCorrection = 0;
         }
         return headingCorrection;

@@ -3,60 +3,26 @@ package org.firstinspires.ftc.teamcode.config;
 import com.bylazar.configurables.annotations.Configurable;
 
 /**
- * TuningConfig — every number you might adjust at a competition lives here.
+ * TuningConfig — cross-cutting configurables that apply globally, not to any one subsystem.
  *
- * CLAUDE.md section 6 (Reload & configuration model), Tier 1:
- *   These are LIVE CONFIGURABLES. With Panels open you can change any of these on the dashboard in
- *   real time with NO code push at all. Never hardcode a tunable number in a subsystem or OpMode.
- *
- * IMPORTANT (CLAUDE.md section 6, "Promote good values back to source"):
- *   Values tuned live on the dashboard are RUNTIME-ONLY. Once a value is dialed in, copy it back
- *   here as the new default and commit it, or it is lost on the next app restart. The snapshot
- *   written by Persistence (section 7) makes this a copy-paste, not a transcription.
+ * Subsystem-specific tunables (drive speeds, PID gains, mechanism powers) live as public static
+ * fields in each subsystem file with @Configurable on the class (§6 Tier 1). Panels groups them
+ * by class name so they're easy to find. Add each subsystem to TUNING_CLASSES in Persistence.java.
  *
  * Fields must be public + static + non-final for the dashboard to see and edit them.
- * (Verify the exact annotation import against your installed Panels version.)
  */
 @Configurable
 public class TuningConfig {
 
-    // ---- Drivetrain ---------------------------------------------------------------
-    public static double driveSpeedCap = 1.0;      // 0..1, teleop speed multiplier
-    public static double driveSlowModeCap = 0.35;  // 0..1, precision mode multiplier
-    public static double driveDeadzone = 0.05;     // 0..1, stick inputs below this are treated as zero
-
-    // ---- Heading Correction (used by HeadingCorrector) ----------------------------
-    // Optional PIDF heading-hold for TeleOp: robot resists heading drift when the driver isn't
-    // actively turning. Leave OFF until on-robot testing; tune HP first, then HD if it oscillates.
-    public static boolean headingCorrectionEnabled = false;
-    public static double headingNominalVoltage = 12.4;         // voltage-compensate gains
-    public static double headingCorrectionThresholdMin = 0.05; // dead below this correction magnitude
-    public static double headingCorrectionLagMs = 200;         // wait after stick release before engaging
-    public static double headingP = 1.2;
-    public static double headingI = 0;
-    public static double headingD = 500;
-    public static double headingF = 0;
-
-    // ---- Game mechanism tunables do NOT go here — they go in their own subsystem file ----
-    // Each mechanism subsystem has @Configurable on the class and public static fields for its
-    // own tunables. Panels groups them by class name, so "Lift.targetHeightInches" appears under
-    // "Lift", not buried in this file. Add each subsystem class to TUNING_CLASSES in
-    // Persistence.java so its values are included in session persistence.
-
-    // ---- Telemetry ----------------------------------------------------------------
     // Verbose subsystem telemetry is a BENCH tool. Leave OFF for matches so the loop allocates no
-    // telemetry strings (prime directive section 0, section 4 rule 8). Flip it ON live on the
-    // dashboard when you need to watch a subsystem's health while diagnosing on the bench.
+    // telemetry strings (prime directive §0, §4 rule 8). Flip ON live to watch subsystem health.
     public static boolean verboseTelemetry = false;
 
-    // ---- Diagnostics --------------------------------------------------------------
-    // How long a Problem stays in the DiagnosticsCenter feed before it's cleaned up. Longer =
-    // more history on the Driver Hub; shorter = only current problems.
+    // How long a Problem stays in the DiagnosticsCenter feed before it's cleaned up.
     public static long diagnosticsProblemExpireSeconds = 10;
 
-    // Profiler.timeIt() logs per-block avg/min/max via RobotLog when this is on. BENCH TOOL —
-    // leave OFF for matches (§4 rule 8, log I/O adds to loop budget). Flip on when investigating
-    // a specific loop-time regression.
+    // Profiler.timeIt() logs per-block avg/min/max via RobotLog. BENCH TOOL — leave OFF for
+    // matches (§4 rule 8). Flip on when investigating a loop-time regression.
     public static boolean profilerEnabled = false;
 
     private TuningConfig() { } // static holder; never instantiated
