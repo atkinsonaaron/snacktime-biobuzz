@@ -19,6 +19,9 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-18 (continued, fourth pass)
+- **Pedro localization fully set up on-robot.** Robot mass set to 6.5 kg. Pod offsets measured via OffsetsTuner (forwardPodY=6.735 in, strafePodX=0.287 in) and entered into PinpointConstants. OffsetsTuner added to Tuning menu. Field visualization wired up in Panels: robot shown as red circle with heading line, pose history in green, telemetry formatted to 3 decimal places with heading in degrees. (`pedroPathing/Constants.java`, `pedroPathing/Tuning.java`)
+
 ## 2026-07-18 (continued, third pass)
 - **Snapshot now captures real battery voltage and port info per device.** Battery voltage was always 0.0 because the voltage sensor isn't ready during OpMode init — fixed by reading it on the first loop tick instead, storing it as a field, and using that in the stop snapshot. Hardware map in the snapshot now shows which port each device is on (e.g. `"LF_Motor": "port 0"`) instead of just the name, so the snapshot doubles as a wiring record. (`util/Persistence.java`, `opmodes/TeleOpExample.java`, `opmodes/AutonomousExample.java`)
 
