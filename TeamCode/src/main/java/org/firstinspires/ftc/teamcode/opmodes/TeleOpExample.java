@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import com.bylazar.telemetry.PanelsTelemetry;
 import com.pedropathing.follower.Follower;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.seattlesolvers.solverslib.command.CommandScheduler;
@@ -14,6 +15,7 @@ import org.firstinspires.ftc.teamcode.util.BulkReads;
 import org.firstinspires.ftc.teamcode.util.LogCleanup;
 import org.firstinspires.ftc.teamcode.util.LoopTimer;
 import org.firstinspires.ftc.teamcode.util.Persistence;
+import org.firstinspires.ftc.teamcode.util.RobotIdentity;
 
 /**
  * TeleOpExample — field-centric mecanum drive. LEFT_BUMPER = slow mode.
@@ -30,12 +32,19 @@ public class TeleOpExample extends CommandOpMode {
     private GamepadEx driver;
     private Follower follower;
     private double startBatteryVolts = 0.0;
+    private RobotIdentity robotId;
+    private String idBanner; // built once at init; reused each loop (§4 rule 8, no per-loop alloc)
 
     @Override
     public void initialize() {
         // MANUAL bulk caching — the biggest lever on loop time (section 0, section 4 rule 1).
         bulkReads = new BulkReads(hardwareMap);
-        Persistence.loadAndApplyTuning(telemetry);
+
+        // Which robot is this? Read once, from the hub network name (see RobotIdentity).
+        robotId = RobotIdentity.resolve();
+        idBanner = robotId.banner();
+
+        Persistence.loadAndApplyTuning(robotId, telemetry);
         LogCleanup.maybeRun(telemetry); // fires once every 14 days, silent otherwise
 
         drivetrain = new Drivetrain(hardwareMap);
@@ -45,7 +54,10 @@ public class TeleOpExample extends CommandOpMode {
         follower = Constants.createFollower(hardwareMap);
         follower.startTeleopDrive();
 
-        Persistence.writeSnapshot(new Persistence.Snapshot(), hardwareMap); // safe: init, not the loop (section 7)
+        Persistence.Snapshot initSnap = new Persistence.Snapshot();
+        initSnap.robot = robotId.robot.name();
+        initSnap.networkName = robotId.networkName;
+        Persistence.writeSnapshot(initSnap, hardwareMap); // safe: init, not the loop (section 7)
     }
 
     @Override
@@ -83,6 +95,10 @@ public class TeleOpExample extends CommandOpMode {
         // Loop-time readout is REQUIRED (section 0 prime directive, section 4 rule 7).
         // Pass numbers, not hand-built strings (rule 8). Watch Loop Hz for regressions.
         loopTimer.update();
+        // Robot identity banner FIRST, so "which robot am I on?" is always the top line — on the
+        // Driver Hub and mirrored to Panels. Pre-built string, so no per-loop allocation (§4 rule 8).
+        telemetry.addLine(idBanner);
+        PanelsTelemetry.INSTANCE.getTelemetry().debug(idBanner);
         telemetry.addData("Loop Hz", loopTimer.getHz());
         telemetry.addData("Worst ms", loopTimer.getMaxLoopMs());
         telemetry.addData("Heading °", Math.toDegrees(follower.getPose().getHeading()));
@@ -98,8 +114,10 @@ public class TeleOpExample extends CommandOpMode {
     public void reset() {
         follower.breakFollowing();
         drivetrain.stop();
-        Persistence.saveTuning();
+        Persistence.saveTuning(robotId);
         Persistence.Snapshot stopSnap = new Persistence.Snapshot();
+        stopSnap.robot = robotId.robot.name();
+        stopSnap.networkName = robotId.networkName;
         stopSnap.startingBatteryVolts = startBatteryVolts;
         stopSnap.captureLoop(loopTimer); // loop-time trend data (§0)
         Persistence.writeSnapshot(stopSnap, hardwareMap); // post-match record (section 7)

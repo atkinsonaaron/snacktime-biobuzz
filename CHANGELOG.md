@@ -19,6 +19,43 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-19 (continued)
+- **Charter: we run ONE Limelight, not two.** Updated the hardware map and the vision note — model
+  iteration and competition use share the single camera, so model deploys stay deliberate (validate
+  first, keep the previous model to roll back to). (`CLAUDE.md` §10, `STATUS.md`)
+- **Made the whole persistence layer robot-aware — tuning and snapshots are now per-robot.** Builds
+  on the RobotIdentity work below. Tuning files are chosen by identity: competition robot writes/reads
+  `comp_tuning.json`, test bot uses `TESTBOT_SCRATCH_do_not_promote.json` (deliberately loud name,
+  gitignored), and an **UNKNOWN** hub loads and saves *nothing* (fail closed) — it never gets handed
+  the competition robot's tuning by accident, and says so loudly on the Driver Hub. Snapshots are now
+  per-robot too (`snacktime_snapshot_COMPETITION.json` / `_TESTBOT.json` / `_UNKNOWN.json`) so pulling
+  both robots' files into one folder never clobbers. The in-code static defaults remain the canonical
+  COMPETITION tuning (git backup); the test bot's scratch file stays on its hub and is never committed
+  — that's what lets students tune the test bot freely without endangering the comp tuning. The
+  file-selection logic is a pure function with off-robot unit tests (`PersistenceFileNamingTest`, 6
+  tests, incl. the safety-critical UNKNOWN→null fail-closed case). `LogCleanup` confirmed safe — it
+  only deletes `.log`/`.txt`/`.csv`, never our `.json` files. `.gitignore` covers all per-robot hub
+  artifacts. CLAUDE.md §6/§7/§10 amended with the two-robot model. Hot-reloadable (Tier 2), no
+  dependency change. (`util/Persistence.java`, `opmodes/*.java`, `.gitignore`,
+  `TeamCode/src/test/.../PersistenceFileNamingTest.java`, `CLAUDE.md`)
+
+## 2026-07-19
+- **Added robot identity from the hub network name, shown loudly on the Driver Hub and Panels.** New
+  `util/RobotIdentity.java` reads the Control Hub's network name at init and resolves which physical
+  robot it's running on: a name ending `-C-RC` → COMPETITION, `-T-RC` → TESTBOT, anything else →
+  UNKNOWN (fail-closed — an unidentified hub is never assumed to be the comp robot). This is the
+  groundwork for loading per-robot drivetrain/Pedro tuning safely: the same commit runs on both
+  robots and figures out at runtime which one it's on, keyed to the hub name (set once in the REV
+  Hardware Client, requires a reboot to change — a student can't flip it from an OpMode). A loud
+  `ROBOT: COMPETITION / TEST BOT / *** UNKNOWN ***` banner now shows first on the Driver Hub and is
+  mirrored to Panels in all three OpModes, so which robot you're on is always visible. Identity +
+  network name are also captured in every snapshot. SystemsCheck displays it and warns (not fails)
+  on UNKNOWN. Verified against RobotCore 11.1.0 sources: the API (`DeviceNameManagerFactory
+  .getInstance().getDeviceName()`) is real, and the FTC name validator restricts the team suffix to
+  a single letter — so `-C`/`-T`, not `-COMP`/`-TEST`. Hot-reloadable (Tier 2), no dependency change.
+  (`util/RobotIdentity.java`, `opmodes/TeleOpExample.java`, `opmodes/AutonomousExample.java`,
+  `opmodes/SystemsCheck.java`, `util/Persistence.java`)
+
 ## 2026-07-18 (continued, eighteenth pass)
 - **Decided against paying for enforced branch protection on `master`.** The `snacktime-robotics-34672`
   org is private and on the GitHub Free plan, which doesn't offer required status checks/reviews for

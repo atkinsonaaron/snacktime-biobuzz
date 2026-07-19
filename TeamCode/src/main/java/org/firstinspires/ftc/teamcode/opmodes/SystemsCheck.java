@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.teamcode.util.LogCleanup;
 import org.firstinspires.ftc.teamcode.util.Persistence;
+import org.firstinspires.ftc.teamcode.util.RobotIdentity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,11 +33,22 @@ public class SystemsCheck extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        Persistence.loadAndApplyTuning(telemetry);
+        // Which robot is this? Resolve FIRST — tuning load is per-robot (see RobotIdentity).
+        RobotIdentity robotId = RobotIdentity.resolve();
+        Persistence.loadAndApplyTuning(robotId, telemetry);
         LogCleanup.maybeRun(telemetry); // fires once every 14 days, silent otherwise
 
         List<String> notes = new ArrayList<>();
         boolean passed = true;
+
+        // --- which robot is this? (from the hub network name) ---
+        notes.add(robotId.banner());
+        if (!robotId.isKnown()) {
+            // Not a hard fail — SystemsCheck runs on both robots, and an unnamed bench hub is a
+            // legitimate state. But it means tuning selection failed closed (loaded nothing), so
+            // say so loudly here rather than let it surprise anyone later.
+            notes.add("WARN robot identity UNKNOWN — set the hub name to ...-C-RC or ...-T-RC");
+        }
 
         // --- check each motor is present and configured ---
         for (String name : MOTOR_NAMES) {
@@ -76,6 +88,8 @@ public class SystemsCheck extends LinearOpMode {
         snap.systemsCheckPassed = passed;
         snap.systemsCheckNotes = notes;
         snap.startingBatteryVolts = volts;
+        snap.robot = robotId.robot.name();
+        snap.networkName = robotId.networkName;
         Persistence.writeSnapshot(snap, hardwareMap);
 
         waitForStart();
@@ -100,6 +114,6 @@ public class SystemsCheck extends LinearOpMode {
 
         telemetry.addLine("Systems check complete.");
         telemetry.update();
-        Persistence.saveTuning();
+        Persistence.saveTuning(robotId);
     }
 }

@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import com.bylazar.telemetry.PanelsTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.util.RobotLog;
 import com.seattlesolvers.solverslib.command.Command;
@@ -16,6 +17,7 @@ import org.firstinspires.ftc.teamcode.util.BulkReads;
 import org.firstinspires.ftc.teamcode.util.LogCleanup;
 import org.firstinspires.ftc.teamcode.util.LoopTimer;
 import org.firstinspires.ftc.teamcode.util.Persistence;
+import org.firstinspires.ftc.teamcode.util.RobotIdentity;
 
 /**
  * AutonomousExample — shows the command-tree structure (CLAUDE.md §3) that REPLACES a hand-rolled
@@ -35,6 +37,8 @@ public class AutonomousExample extends CommandOpMode {
     private BulkReads bulkReads;
     private Drivetrain drivetrain;
     private AutonMenu menu;
+    private RobotIdentity robotId;
+    private String idBanner; // built once at init; reused each loop (§4 rule 8, no per-loop alloc)
 
     // Match context — read from the menu when START is pressed. String fields so they land in the
     // snapshot cleanly.
@@ -48,7 +52,12 @@ public class AutonomousExample extends CommandOpMode {
     public void initialize() {
         // Hardware first, so the menu can render while init is running.
         bulkReads = new BulkReads(hardwareMap);
-        Persistence.loadAndApplyTuning(telemetry);
+
+        // Which robot is this? Read once, from the hub network name (see RobotIdentity).
+        robotId = RobotIdentity.resolve();
+        idBanner = robotId.banner();
+
+        Persistence.loadAndApplyTuning(robotId, telemetry);
         LogCleanup.maybeRun(telemetry); // fires once every 14 days, silent otherwise
         drivetrain = new Drivetrain(hardwareMap);
         menu = new AutonMenu(telemetry);
@@ -128,6 +137,10 @@ public class AutonomousExample extends CommandOpMode {
 
         // Loop-time readout is REQUIRED (§0 prime directive, §4 rule 7). Pass numbers, not strings (§4 rule 8).
         loopTimer.update();
+        // Robot identity banner FIRST — on the Driver Hub and mirrored to Panels. Pre-built string,
+        // so no per-loop allocation (§4 rule 8).
+        telemetry.addLine(idBanner);
+        PanelsTelemetry.INSTANCE.getTelemetry().debug(idBanner);
         telemetry.addData("Loop Hz", loopTimer.getHz());
         telemetry.addData("Worst ms", loopTimer.getMaxLoopMs());
         telemetry.addData("Alliance", selectedAlliance);
@@ -138,7 +151,7 @@ public class AutonomousExample extends CommandOpMode {
     @Override
     public void reset() {
         drivetrain.stop();
-        Persistence.saveTuning();
+        Persistence.saveTuning(robotId);
         Persistence.writeSnapshot(snapshot(), hardwareMap); // post-match record (§7)
         CommandScheduler.getInstance().reset();
     }
@@ -148,6 +161,10 @@ public class AutonomousExample extends CommandOpMode {
         s.alliance = selectedAlliance;
         s.startPose = selectedStartPose;
         s.startingBatteryVolts = startBatteryVolts;
+        if (robotId != null) {
+            s.robot = robotId.robot.name();
+            s.networkName = robotId.networkName;
+        }
         s.captureLoop(loopTimer); // loop-time trend data (§0). At init, values are 0 — that's fine.
         return s;
     }

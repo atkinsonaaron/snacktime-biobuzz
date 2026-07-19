@@ -1,10 +1,11 @@
 # STATUS.md — where this project actually is
 
-**Last updated:** 2026-07-18 — **Phase 0 complete, 6-of-6.** SystemsCheck, LocalizationTest, and
-the Pedro `Line` path test all run on-robot; snapshot pulled and `gitHash` verified real. TeleOp
-forward/backward direction bug found and fixed, and the `maxLoopMs` spike (1005→27ms) root-caused
-and fixed, both the same session. **Coach set the next three-step plan:** Pedro PIDF tuning →
-Limelight object detection → Pedro path-follow to the detected object (see "Next action" below).
+**Last updated:** 2026-07-19 — **Two-robot support built.** Robot identity (from hub network name)
++ robot-aware persistence: per-robot tuning/snapshot files, fail-closed on UNKNOWN, loud identity
+banner on Driver Hub + Panels. Lets us develop on a Test bot and deliver a reliable Competition
+robot off one codebase. (Earlier 2026-07-18: **Phase 0 complete, 6-of-6**; TeleOp direction + the
+`maxLoopMs` 1005→27ms spike both fixed.) **Coach's three-step plan:** Pedro PIDF tuning → Limelight
+object detection → Pedro path-follow to the detected object (see "Next action").
 
 **Read `CLAUDE.md` first** — that's the charter (rules + architecture) and it governs everything.
 This file is only the *current state*: what's verified, what's left, and what to do next. Keep it
@@ -118,10 +119,9 @@ the Limelight hardware and exposes intent-level methods like `hasTarget()` /
 `getTargetOffset()`. Charter guidance already in place: detection runs **on the Limelight, never
 the Control Hub** (§4 rule 4), and its job is **relative aiming, not pose** — never blended into
 the Pinpoint pose estimate (§3, §5 graceful-degradation).
-- Two Limelight 3A units exist (§10): one for the competition robot, one dedicated to collecting
-  training data / iterating the vision model, so model work never competes for competition-robot
-  time. Model deploys to the competition camera **deliberately**, keeping the previous model to
-  roll back to (§10).
+- One Limelight 3A (§10). The neural-net model is its own artifact (does not hot-reload via Sloth);
+  since there's a single camera, model iteration and competition use share it — validate a new model
+  before a competition, deploy it deliberately, and keep the previous model to roll back to (§10).
 - `util/StaleWatcher.java` is ready to wire in immediately for "Limelight hasn't updated in
   500ms → treat as lost, don't act on stale data."
 
@@ -242,11 +242,25 @@ future work can happen against real game pieces before the September 12, 2026 ki
   flags stay in `TuningConfig`. Live-editable from Panels; once a value is dialed in, promote it
   back to source (§6 "Promote good values back to source"). New `@Configurable` classes must be
   added to `Persistence.TUNING_CLASSES` to be captured in session persistence.
-- **`snacktime_snapshot.json` stays a single overwritten file — decided 2026-07-18.** No
-  date-stamped per-session snapshot files. Per-session history already lives in the RC's persistent
-  logs (`SNAPSHOT:` lines, one per OpMode run, 14-day retention via `LogCleanup`); this file is
-  just the fast-path "latest state" pull, same role as `current_tuning.json`. Don't re-raise this
-  as an open question — it was considered and closed.
+- **Snapshot stays single-per-session (no date-stamping) — decided 2026-07-18.** Per-session
+  history lives in the RC's persistent logs (`SNAPSHOT:` lines, 14-day retention via `LogCleanup`);
+  the snapshot file is the fast-path "latest state" pull. (This is the *per-session* axis. It is NOT
+  in tension with the *per-robot* filenames added 2026-07-19 below — different axis.)
+- **Two robots, one codebase — robot-aware persistence — built 2026-07-19.** The same commit runs on
+  the Competition robot and the Test bot; `util/RobotIdentity` reads the hub network name at init
+  (`34672-C-RC` → COMPETITION, `34672-T-RC` → TESTBOT, else UNKNOWN) and tuning/snapshot files are
+  chosen per-robot. Fail-closed: an UNKNOWN hub loads/saves no tuning and runs on the in-code
+  defaults (= competition values), loudly. In-code static defaults are the canonical COMPETITION
+  tuning (git backup); the test bot's `TESTBOT_SCRATCH_do_not_promote.json` stays on its hub, is
+  gitignored, and is never committed — students can tune the test bot freely without endangering
+  comp tuning. Promote to source only from the competition robot. Identity shows as a loud banner on
+  the Driver Hub + Panels and is recorded in every snapshot. Pure file-selection logic is unit-tested
+  (`PersistenceFileNamingTest`). See `CLAUDE.md` §6/§7/§10.
+  - **On-hub setup still required:** name the hubs in the REV Hardware Client — comp `34672-C-RC`,
+    test `34672-T-RC` — then reboot. Until then both resolve UNKNOWN (safe: code defaults, loud).
+  - **On-robot confirmation pending:** the exact string `getDeviceName()` returns on a Control Hub
+    (with/without the `-RC` suffix) — the code logs the raw name + matches on the `-C-RC`/`-T-RC`
+    suffix; first on-hub run confirms the format. Also confirm the identity banner renders in Panels.
 - **No enforced branch protection on `master` — decided 2026-07-18.** The repo is private, owned by
   the `snacktime-robotics-34672` GitHub org, which is on the Free plan — required status checks
   and required reviews aren't available for private repos below GitHub Team ($4/user/month). Chose

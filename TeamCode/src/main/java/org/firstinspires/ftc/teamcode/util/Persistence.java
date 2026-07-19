@@ -33,21 +33,30 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Persistence — two jobs (CLAUDE.md §7):
+ * Persistence — two jobs (CLAUDE.md §7), both now ROBOT-AWARE (see {@link RobotIdentity}):
  *
- *   1. TUNING BACKUP (session persistence):
- *      {@link #saveTuning()} writes every registered tunable to current_tuning.json on the hub.
- *      {@link #loadAndApplyTuning(Telemetry)} reads it back and applies the values to the live
- *      static fields on each class in TUNING_CLASSES, so dashboard-tuned values survive across
- *      robot restarts. Call save on every OpMode stop; call load on every OpMode init.
- *      Limitation: a hub re-flash wipes the file — git is the real disaster backup (see below).
+ *   1. TUNING BACKUP (session persistence), PER ROBOT:
+ *      {@link #saveTuning(RobotIdentity)} writes every registered tunable to that robot's own file.
+ *      {@link #loadAndApplyTuning(RobotIdentity, Telemetry)} reads it back and applies the values
+ *      to the live static fields on each class in TUNING_CLASSES. Call save on every OpMode stop;
+ *      call load on every OpMode init.
  *
- *   2. SNAPSHOT (traceability record):
- *      {@link #writeSnapshot(Snapshot, HardwareMap)} writes a full JSON record including git hash,
- *      hardware devices, loop-time stats (avg Hz + worst ms) so we can watch trends over time,
- *      and every registered tunable. Also logged via RobotLog so it appears in
- *      robotControllerLog.txt — grep "SNAPSHOT:" after any session to copy values back to source
- *      and commit them (that is the git disaster-backup workflow).
+ *   2. SNAPSHOT (traceability record), PER ROBOT:
+ *      {@link #writeSnapshot(Snapshot, HardwareMap)} writes a full JSON record (git hash, hardware,
+ *      loop-time stats, every tunable) to a per-robot file, and also logs it via RobotLog so it
+ *      appears in robotControllerLog.txt — grep "SNAPSHOT:" after any session.
+ *
+ * THE TWO-ROBOT MODEL (why the files are per-robot):
+ *   The SAME commit runs on both the Competition robot and the Test bot (one codebase, never
+ *   forked). They differ mainly in drivetrain/Pedro tuning (mass & CG differ). So:
+ *     - Competition robot -> {@code comp_tuning.json}  (its session tuning)
+ *     - Test bot          -> {@code TESTBOT_SCRATCH_do_not_promote.json}  (scratch; loud on purpose)
+ *     - UNKNOWN identity   -> NO tuning file loaded or saved (fail closed). An unidentified hub is
+ *       NEVER assumed to be the comp robot; it runs on the in-code defaults and says so loudly.
+ *   CANONICAL tuning = the in-code static defaults, which represent the COMPETITION robot and are
+ *   the git backup. Promote dialed-in values back to source FROM THE COMPETITION ROBOT only; the
+ *   test bot's scratch file stays on its hub and is never committed (it's gitignored). This is what
+ *   lets the kids tune the test bot freely without ever endangering the competition tuning.
  *
  * HARD RULES (CLAUDE.md §7):
  *   - File I/O NEVER happens in the main loop — only on init, stop, or explicit button press.
@@ -56,9 +65,11 @@ import java.util.Map;
  */
 public final class Persistence {
 
-    private static final String SNAPSHOT_FILE = "snacktime_snapshot.json";
-    private static final String TUNING_FILE   = "current_tuning.json";
-    private static final String TAG           = "Persistence";
+    private static final String TAG = "Persistence";
+
+    // Tuning file names, per robot. UNKNOWN deliberately has none — fail closed.
+    static final String COMP_TUNING_FILE    = "comp_tuning.json";
+    static final String TESTBOT_TUNING_FILE = "TESTBOT_SCRATCH_do_not_promote.json";
 
     // All @Configurable classes whose public static fields are included in session persistence.
     // TuningConfig holds cross-cutting/drivetrain values; each mechanism subsystem holds its own.
@@ -82,6 +93,11 @@ public final class Persistence {
         public String gitHash   = BuildInfo.GIT_HASH;
         public String buildTime = BuildInfo.BUILD_TIME;
         public long   savedAtSeconds = System.currentTimeMillis() / 1000L;
+
+        // Which physical robot produced this snapshot, and the hub network name it was read from
+        // (see RobotIdentity). Set by the OpMode; defaults are the fail-closed values.
+        public String robot       = "UNKNOWN";
+        public String networkName = "(unavailable)";
 
         public String alliance           = "UNKNOWN";
         public String startPose          = "UNKNOWN";
@@ -129,7 +145,9 @@ public final class Persistence {
     public static void writeSnapshot(Snapshot snapshot) {
         captureTuningInto(snapshot.tuning);
         try {
-            File file = AppUtil.getInstance().getSettingsFile(SNAPSHOT_FILE);
+            // Per-robot filename so pulling snapshots from both robots into one folder never clobbers,
+            // and each file is self-describing (see snapshotFileFor).
+            File file = AppUtil.getInstance().getSettingsFile(snapshotFileFor(snapshot.robot));
             file.getParentFile().mkdirs();
             String json = GSON.toJson(snapshot);
             ReadWriteFile.writeFile(file, json);
@@ -146,19 +164,43 @@ public final class Persistence {
     // -------------------------------------------------------------------------
 
     /**
-     * Saves every registered tunable to current_tuning.json on the hub, using namespaced
-     * "ClassName.fieldName" keys. Call on every OpMode stop/reset. NEVER in the loop.
-     * Dashboard-modified values are saved here exactly as they are — they supersede source defaults
-     * on the next load.
+     * The tuning file name for a robot, or null if identity is UNKNOWN. Pure + package-private so it
+     * can be unit-tested off-robot (§9). UNKNOWN returns null on purpose: fail closed — never
+     * load/save tuning for a hub we can't identify.
      */
-    public static void saveTuning() {
+    public static String tuningFileFor(RobotIdentity.Robot robot) {
+        switch (robot) {
+            case COMPETITION: return COMP_TUNING_FILE;
+            case TESTBOT:     return TESTBOT_TUNING_FILE;
+            default:          return null; // UNKNOWN
+        }
+    }
+
+    /** Per-robot snapshot file name. {@code robot} is Snapshot.robot (enum name, or "UNKNOWN"). Pure. */
+    public static String snapshotFileFor(String robot) {
+        String tag = (robot == null || robot.trim().isEmpty()) ? "UNKNOWN" : robot.trim();
+        return "snacktime_snapshot_" + tag + ".json";
+    }
+
+    /**
+     * Saves every registered tunable to THIS robot's tuning file, using namespaced
+     * "ClassName.fieldName" keys. Call on every OpMode stop/reset. NEVER in the loop.
+     * UNKNOWN identity saves nothing (fail closed) — we never want to persist tuning we can't
+     * attribute to a specific robot.
+     */
+    public static void saveTuning(RobotIdentity id) {
+        String fileName = tuningFileFor(id.robot);
+        if (fileName == null) {
+            RobotLog.i("Persistence: robot UNKNOWN — tuning NOT saved (fail closed)");
+            return;
+        }
         try {
-            File file = AppUtil.getInstance().getSettingsFile(TUNING_FILE);
+            File file = AppUtil.getInstance().getSettingsFile(fileName);
             file.getParentFile().mkdirs();
             Map<String, Object> values = new LinkedHashMap<>();
             captureTuningInto(values);
             ReadWriteFile.writeFile(file, GSON.toJson(values));
-            RobotLog.i("Persistence: tuning saved → %s", file.getAbsolutePath());
+            RobotLog.i("Persistence: %s tuning saved → %s", id.robot, file.getAbsolutePath());
         } catch (Throwable t) {
             RobotLog.e("Persistence: tuning save FAILED: %s", t.getMessage());
             Log.e(TAG, "Failed to save tuning", t);
@@ -166,17 +208,36 @@ public final class Persistence {
     }
 
     /**
-     * Loads current_tuning.json and applies every value back to the live tunable statics on each
-     * class in TUNING_CLASSES. Dashboard-tuned values supersede source defaults automatically.
-     * Telemeters loudly when a file is found — required by CLAUDE.md §7.
+     * Loads THIS robot's tuning file and applies every value back to the live tunable statics on each
+     * class in TUNING_CLASSES. Telemeters loudly — required by CLAUDE.md §7.
      * Call on every OpMode init. NEVER in the loop.
      *
-     * @return true if a tuning file was found and applied; false if running from source defaults.
+     * FAIL CLOSED: if identity is UNKNOWN, loads NOTHING and says so loudly — the robot runs on the
+     * in-code defaults (which are the COMPETITION values). An unidentified hub is never given the
+     * comp robot's saved tuning by accident, nor the test bot's.
+     *
+     * @return true if a tuning file was found and applied; false if running from code defaults.
      */
-    public static boolean loadAndApplyTuning(Telemetry telemetry) {
+    public static boolean loadAndApplyTuning(RobotIdentity id, Telemetry telemetry) {
+        String fileName = tuningFileFor(id.robot);
+        if (fileName == null) {
+            String msg = "ROBOT UNKNOWN [" + id.networkName + "] — NO tuning file loaded; running on "
+                    + "code defaults (= competition values). Name the hub ...-C-RC or ...-T-RC.";
+            if (telemetry != null) telemetry.addLine(msg);
+            RobotLog.i("Persistence: %s", msg);
+            return false;
+        }
         try {
-            File file = AppUtil.getInstance().getSettingsFile(TUNING_FILE);
-            if (!file.exists()) return false;
+            File file = AppUtil.getInstance().getSettingsFile(fileName);
+            if (!file.exists()) {
+                // No session file yet for this robot — code defaults apply. On the test bot those are
+                // the competition values until it's tuned; be honest about it rather than silent.
+                String msg = String.format(Locale.US,
+                        "%s: no tuning file yet (%s) — running on code defaults", id.robot, fileName);
+                if (telemetry != null) telemetry.addLine(msg);
+                RobotLog.i("Persistence: %s", msg);
+                return false;
+            }
 
             Map<String, Object> values = GSON.fromJson(
                     ReadWriteFile.readFile(file),
@@ -201,7 +262,7 @@ public final class Persistence {
             String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
                     .format(new Date(file.lastModified()));
             String msg = String.format(Locale.US,
-                    "LOADED TUNING FROM FILE (%s) — %d values", timestamp, applied);
+                    "LOADED %s TUNING (%s, %s) — %d values", id.robot, fileName, timestamp, applied);
             telemetry.addLine(msg);
             RobotLog.i("Persistence: %s", msg);
             return true;

@@ -260,6 +260,23 @@ destabilize the robot. Therefore:
   is dialed in, commit it into the code as the new default — the snapshot in §7 makes this a
   copy-paste, not a transcription.
 
+### Two robots, one codebase — tuning ownership — NON-NEGOTIABLE
+We run a **Competition robot** and a **Test bot** off the *same commit* (never forked). The core
+hardware (motors, servos) is identical; mechanisms may or may not be bolted on the test bot; and
+the two genuinely differ in drivetrain/Pedro tuning because mass and CG differ. The code stays
+one codebase and figures out at runtime which robot it's on, via `util/RobotIdentity` (read from
+the hub network name — see §10). Rules:
+
+- **The in-code static defaults are the COMPETITION robot's canonical tuning**, and git is their
+  backup. Promote dialed-in values back to source **only from the competition robot.**
+- **The test bot's live tuning stays on the test bot's hub** in a deliberately loud file
+  (`TESTBOT_SCRATCH_do_not_promote.json`) — it is gitignored and **must never be committed.** This
+  is what lets students tune the test bot freely without endangering the competition tuning.
+- **Session tuning files are per-robot and never shared:** comp → `comp_tuning.json`, test →
+  `TESTBOT_SCRATCH_do_not_promote.json`. An **UNKNOWN** hub (name not `...-C-RC` / `...-T-RC`)
+  **loads and saves no tuning at all** (fail closed) and runs on the in-code = competition defaults,
+  saying so loudly. An unidentified hub is never assumed to be the competition robot.
+
 ---
 
 ## 7. Persistence & snapshots — data and tuning to disk
@@ -279,14 +296,20 @@ its own. The snapshot includes:
 - the last-known-good robot pose,
 - the pre-match systems-check results and starting battery voltage.
 
+Snapshots are **per-robot** (`snacktime_snapshot_COMPETITION.json` / `_TESTBOT.json` / `_UNKNOWN.json`)
+and also carry the resolved `robot` + hub `networkName`, so a snapshot pulled to a laptop is always
+attributable to the robot that produced it and two robots' files never clobber each other.
+
 ### Load-on-init — guarded, optional
-Loading tuning from a `current-tuning.json` at init is allowed **only** with these guards, so a
+Loading tuning from the robot's tuning file at init is allowed **only** with these guards, so a
 file can never silently override reviewed code:
 
-- it is **loud** — telemeter `LOADED TUNING FROM FILE (<timestamp>)` whenever it happens,
+- it is **loud** — telemeter `LOADED <ROBOT> TUNING (<file>, <timestamp>)` whenever it happens,
 - it **falls back** to code defaults if the file is missing or corrupt,
-- values loaded this way are **promoted into git before the next session** — the committed code
-  stays the canonical source of truth.
+- it is **per-robot and fail-closed** — the file loaded is chosen by `RobotIdentity`; an UNKNOWN
+  hub loads nothing (see §6),
+- values loaded this way are **promoted into git before the next session, from the competition
+  robot** — the committed code stays the canonical source of truth (§6).
 
 ### Rules — NON-NEGOTIABLE
 - **File I/O never happens in the main loop.** Writes and reads occur only on init, on stop, or on
@@ -345,7 +368,7 @@ Persistent control/sensor suite (carries across seasons):
 |------|--------|-----|-------|
 | Controller | REV Control Hub | — | MANUAL bulk caching |
 | Actuator hub | REV Servo Hub | — | needs RC + DS apps on 10.0+ to configure as a Servo Hub (else shows as generic Expansion Hub); firmware/address via REV Hardware Client |
-| Vision | Limelight 3A ×2 | USB 3.0 | detection on-device; used for relative **aiming, not pose** (§3) |
+| Vision | Limelight 3A | USB 3.0 | detection on-device; used for relative **aiming, not pose** (§3) |
 | Odometry | goBILDA Pinpoint (V2), config name `pinpoint` | I2C | **single source of pose (no fusion)**; read once/loop; mind wire routing/ferrite; pod offsets measured on-robot 2026-07-18 (`forwardPodY=6.735`, `strafePodX=0.287` in `pedroPathing/Constants.java`) |
 | Distance | Brushland Labs Color Rangefinder | Analog | analog distance mode; cheap to read (rides bulk read) |
 | Drivetrain FL | `LF_Motor` (port 0) | — | goBILDA Yellow Jacket; per-wheel health telemetry required |
@@ -358,13 +381,20 @@ its config name, port, and the intent-level methods its subsystem exposes. Keep 
 math as testable pure logic (§9), with its tunables exposed as Tier-1 configurables.
 
 > Keep the config names in this table identical to the Robot Controller configuration on the hub —
-> **and identical across the practice robot and the competition robot** — so code runs unmodified on both.
+> **and identical across the test robot and the competition robot** — so code runs unmodified on both.
+> The one thing that is deliberately *different* per robot is the **hub network name** (set in the
+> REV Hardware Client), which is how the code tells the robots apart: **competition = `34672-C-RC`,
+> test = `34672-T-RC`**. `util/RobotIdentity` reads it at init (verified API:
+> `DeviceNameManagerFactory.getInstance().getDeviceName()`); the FTC validator limits the team
+> suffix to a single letter, so `-C`/`-T`, not `-COMP`/`-TEST`. A name matching neither resolves to
+> UNKNOWN and the robot fails closed on tuning (§6). The resolved identity shows as a loud banner on
+> the Driver Hub and Panels, and is recorded in every snapshot.
 
-**Two cameras.** We run two Limelights: one stays on the competition robot, the second collects
-training data and iterates the vision model, so model work never competes for competition-robot time.
-The neural-net model lives on the camera and does **not** hot-reload via Sloth (§6) — it is its own
-artifact with its own versioning. Deploy a validated model to the competition camera deliberately,
-and keep the previous model to roll back to.
+**One camera.** We run a single Limelight. The neural-net model lives on the camera and does
+**not** hot-reload via Sloth (§6) — it is its own artifact with its own versioning. Because there's
+only one camera, vision-model iteration and competition use share it, so treat model deploys
+deliberately: validate a new model before a competition, deploy it as a conscious step, and keep the
+previous model to roll back to.
 
 ---
 
