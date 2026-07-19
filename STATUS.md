@@ -3,7 +3,8 @@
 **Last updated:** 2026-07-18 — **Phase 0 complete, 6-of-6.** SystemsCheck, LocalizationTest, and
 the Pedro `Line` path test all run on-robot; snapshot pulled and `gitHash` verified real. TeleOp
 forward/backward direction bug found and fixed, and the `maxLoopMs` spike (1005→27ms) root-caused
-and fixed, both the same session.
+and fixed, both the same session. **Coach set the next three-step plan:** Pedro PIDF tuning →
+Limelight object detection → Pedro path-follow to the detected object (see "Next action" below).
 
 **Read `CLAUDE.md` first** — that's the charter (rules + architecture) and it governs everything.
 This file is only the *current state*: what's verified, what's left, and what to do next. Keep it
@@ -95,21 +96,43 @@ Verified via `./gradlew :TeamCode:dependencies` and by reading `TeamCode/build.g
 
 ---
 
-## Next action
+## Next action — three-step plan set by the coach (2026-07-18)
 
 **Phase 0 is done** — the whole generation-first loop (AI writes code → hot reload → live tune →
-observe on real telemetry → persist a record) is proven end to end on real hardware. What's next is
-real tuning/dev work, not proof-of-concept work:
+observe on real telemetry → persist a record) is proven end to end on real hardware. Next up is
+real feature work, in this order:
 
-1. **PIDF-tune Pedro path following** — the `Line` test drifted on its first run (expected,
-   untuned). Work through `Tuning` → `Manual`: Translational Tuner, Heading Tuner, Drive Tuner,
-   Centripetal Tuner, one at a time (§6 "one change at a time"), then re-run `Line`/`Triangle`/
-   `Circle` to confirm tracking tightens up. Promote good values back into `Constants.java`
-   (`followerConstants`) once dialed in.
+**Step 1 — PIDF-tune Pedro path following (in progress).** The `Line` test drifted on its first
+run (expected, untuned). Work through `Tuning` → `Manual`: Translational Tuner, Heading Tuner,
+Drive Tuner, Centripetal Tuner, one at a time (§6 "one change at a time"), then re-run `Line`/
+`Triangle`/`Circle` to confirm tracking tightens up. Promote good values back into
+`Constants.java` (`followerConstants`) once dialed in. **Do this before Step 3** — path-follow-to-
+target accuracy depends on the underlying Follower already tracking well.
 
-~~2. Investigate the `maxLoopMs` spike~~ — **done, see Phase 0 acceptance above.** Root cause was
-`loopTimer.reset()` firing before the deferred, uncached battery-volts read instead of after it.
-Fixed in `TeleOpExample.java` and `AutonomousExample.java`; confirmed on-robot (`1005 → 300.6 → 27.0ms`).
+**Step 2 — Limelight object detection (not started).** Nothing exists yet beyond TODOs/docstring
+examples (`SystemsCheck.java` has a `// TODO: add sensor checks — Limelight reachable`;
+`StaleWatcher.java` and `diagnostics/Problem.java` use "Limelight" only as illustrative
+doc-comment examples, not real code). This is greenfield: a `Vision` (or `Limelight`) subsystem
+needs to be built from scratch, in `subsystems/`, following the four-layer boundary (§3) — it owns
+the Limelight hardware and exposes intent-level methods like `hasTarget()` /
+`getTargetOffset()`. Charter guidance already in place: detection runs **on the Limelight, never
+the Control Hub** (§4 rule 4), and its job is **relative aiming, not pose** — never blended into
+the Pinpoint pose estimate (§3, §5 graceful-degradation).
+- Two Limelight 3A units exist (§10): one for the competition robot, one dedicated to collecting
+  training data / iterating the vision model, so model work never competes for competition-robot
+  time. Model deploys to the competition camera **deliberately**, keeping the previous model to
+  roll back to (§10).
+- `util/StaleWatcher.java` is ready to wire in immediately for "Limelight hasn't updated in
+  500ms → treat as lost, don't act on stale data."
+
+**Step 3 — Pedro path following to the detected Limelight target (not started, depends on Steps
+1 & 2).** Once the Follower is tuned and Vision reports a target, compose them: the Limelight
+gives a *relative* offset to the target (§3 — not a field pose), so this likely means either (a)
+converting that relative offset into a field-pose target for a new Pedro path built at runtime, or
+(b) a closed-loop aim/drive command that re-targets as the offset updates. Build this as a new
+`Command` (commands/ layer, §3) composing `FollowPathCommand` and the new Vision subsystem — not a
+hand-rolled state machine. Decide the exact approach when Step 2 exists and we know what the
+Limelight pipeline actually reports.
 
 **Pre-season opportunity:** order Pollen from AndyMark and build the goBILDA StarterBot Base so
 future work can happen against real game pieces before the September 12, 2026 kickoff.

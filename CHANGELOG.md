@@ -19,6 +19,13 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-18 (continued, sixteenth pass)
+- **Coach set the next three-step development plan.** With Phase 0 closed, work moves to: (1)
+  PIDF-tune Pedro path following, (2) build Limelight object detection from scratch (nothing exists
+  yet beyond TODO markers), (3) compose a path-follow-to-detected-object command on top of both.
+  Recorded in `STATUS.md`'s "Next action" so the sequencing survives a session handoff.
+  (decision only, no code)
+
 ## 2026-07-18 (continued, fifteenth pass)
 - **Snapshot timestamp switched from milliseconds to seconds.** `savedAtMillis` (epoch millis,
   hard to read at a glance) renamed to `savedAtSeconds` (epoch seconds). `Snapshot` is only ever
