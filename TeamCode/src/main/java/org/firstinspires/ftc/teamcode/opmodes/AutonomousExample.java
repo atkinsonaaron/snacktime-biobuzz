@@ -8,6 +8,7 @@ import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.seattlesolvers.solverslib.command.CommandScheduler;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.seattlesolvers.solverslib.command.WaitCommand;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 import org.firstinspires.ftc.teamcode.config.AutonFieldTweaks;
 import org.firstinspires.ftc.teamcode.config.TuningConfig;
@@ -38,7 +39,11 @@ public class AutonomousExample extends CommandOpMode {
     private Drivetrain drivetrain;
     private AutonMenu menu;
     private RobotIdentity robotId;
-    private String idBanner; // built once at init; reused each loop (§4 rule 8, no per-loop alloc)
+    // Built once at init; reused each loop (§4 rule 8, no per-loop alloc). idBanner (plain) goes to
+    // Panels, which has no HTML display-format concept; idBannerHtml (larger/bold/colored) goes to
+    // the Driver Station, which does.
+    private String idBanner;
+    private String idBannerHtml;
 
     // Match context — read from the menu when START is pressed. String fields so they land in the
     // snapshot cleanly.
@@ -56,6 +61,11 @@ public class AutonomousExample extends CommandOpMode {
         // Which robot is this? Read once, from the hub network name (see RobotIdentity).
         robotId = RobotIdentity.resolve();
         idBanner = robotId.banner();
+        idBannerHtml = robotId.bannerHtml();
+        // Enables the "subset of HTML tags" idBannerHtml relies on for larger/colored text. Affects
+        // the whole Driver Station panel (incl. the AutonMenu below), not just this line — other
+        // lines have no tags, so they render unchanged.
+        telemetry.setDisplayFormat(Telemetry.DisplayFormat.HTML);
 
         Persistence.loadAndApplyTuning(robotId, telemetry);
         LogCleanup.maybeRun(telemetry); // fires once every 14 days, silent otherwise
@@ -137,9 +147,9 @@ public class AutonomousExample extends CommandOpMode {
 
         // Loop-time readout is REQUIRED (§0 prime directive, §4 rule 7). Pass numbers, not strings (§4 rule 8).
         loopTimer.update();
-        // Robot identity banner FIRST — on the Driver Hub and mirrored to Panels. Pre-built string,
-        // so no per-loop allocation (§4 rule 8).
-        telemetry.addLine(idBanner);
+        // Robot identity banner FIRST — larger/colored on the Driver Hub (HTML), plain text mirrored
+        // to Panels. Pre-built strings, so no per-loop allocation (§4 rule 8).
+        telemetry.addLine(idBannerHtml);
         PanelsTelemetry.INSTANCE.getTelemetry().debug(idBanner);
         telemetry.addData("Loop Hz", loopTimer.getHz());
         telemetry.addData("Worst ms", loopTimer.getMaxLoopMs());

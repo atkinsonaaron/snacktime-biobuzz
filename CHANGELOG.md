@@ -19,6 +19,27 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-19 (continued, driver hub polish)
+- **Identity banner is now larger/colored on the Driver Hub, plain text still to Panels.** New
+  `RobotIdentity.bannerHtml()` wraps the banner in `Telemetry.DisplayFormat.HTML` tags (verified
+  real FTC SDK feature — "subset of HTML tags... color & size"), color-coded per robot (red=comp,
+  green=test, orange=unknown). `TeleOpExample`/`AutonomousExample` set the display format once at
+  init and show the HTML banner first on the Driver Hub; Panels keeps the plain-text banner (it has
+  no HTML display-format concept). Also strengthened the existing RC-log line to include the literal
+  banner text, not just the raw resolved name, so a post-match log read matches what was on screen.
+- **Added X/Y position to TeleOp's Driver Hub telemetry**, alongside the existing Heading — reads
+  off the same `follower.getPose()` call already being made each loop, so no new hardware read.
+  (`util/RobotIdentity.java`, `opmodes/TeleOpExample.java`, `opmodes/AutonomousExample.java`)
+
+## 2026-07-19 (continued, first real per-robot tuning save)
+- **First test-bot tuning file pulled and committed.** `tuning/testbot_tuning.json` confirms the
+  robot-aware persistence round-trip actually works on-robot: filename is the new per-robot name
+  (not the old `current_tuning.json`), all 17 expected keys present (`TuningConfig`×3 +
+  `Drivetrain`×10 + `JoystickCurve`×4), no metadata wrapper — matches `Persistence.saveTuning()`
+  exactly. Values are still source defaults (no live-tuning done yet) — this proves the save
+  mechanism, not tuned values. Closes most of Step 3 in `STATUS.md`; reload-after-power-cycle still
+  to confirm. (`tuning/testbot_tuning.json`)
+
 ## 2026-07-19 (continued, step-1 checklist)
 - **Added a loop-time check to Step 1's on-hub checklist.** The identity banner (`RobotIdentity` +
   `PanelsTelemetry…debug()`) should be loop-time-free by construction (string built once at init, one

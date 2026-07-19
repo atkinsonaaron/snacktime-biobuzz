@@ -7,6 +7,7 @@ import com.seattlesolvers.solverslib.command.CommandScheduler;
 import com.seattlesolvers.solverslib.gamepad.GamepadEx;
 import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.Drivetrain;
@@ -33,7 +34,11 @@ public class TeleOpExample extends CommandOpMode {
     private Follower follower;
     private double startBatteryVolts = 0.0;
     private RobotIdentity robotId;
-    private String idBanner; // built once at init; reused each loop (§4 rule 8, no per-loop alloc)
+    // Built once at init; reused each loop (§4 rule 8, no per-loop alloc). idBanner (plain) goes to
+    // Panels, which has no HTML display-format concept; idBannerHtml (larger/bold/colored) goes to
+    // the Driver Station, which does.
+    private String idBanner;
+    private String idBannerHtml;
 
     @Override
     public void initialize() {
@@ -43,6 +48,11 @@ public class TeleOpExample extends CommandOpMode {
         // Which robot is this? Read once, from the hub network name (see RobotIdentity).
         robotId = RobotIdentity.resolve();
         idBanner = robotId.banner();
+        idBannerHtml = robotId.bannerHtml();
+        // Enables the "subset of HTML tags" idBannerHtml relies on for larger/colored text. Affects
+        // the whole Driver Station panel, not just this line — other lines have no tags, so they
+        // render unchanged.
+        telemetry.setDisplayFormat(Telemetry.DisplayFormat.HTML);
 
         Persistence.loadAndApplyTuning(robotId, telemetry);
         LogCleanup.maybeRun(telemetry); // fires once every 14 days, silent otherwise
@@ -95,12 +105,15 @@ public class TeleOpExample extends CommandOpMode {
         // Loop-time readout is REQUIRED (section 0 prime directive, section 4 rule 7).
         // Pass numbers, not hand-built strings (rule 8). Watch Loop Hz for regressions.
         loopTimer.update();
-        // Robot identity banner FIRST, so "which robot am I on?" is always the top line — on the
-        // Driver Hub and mirrored to Panels. Pre-built string, so no per-loop allocation (§4 rule 8).
-        telemetry.addLine(idBanner);
+        // Robot identity banner FIRST, so "which robot am I on?" is always the top line — larger/
+        // colored on the Driver Hub (HTML), plain text mirrored to Panels. Pre-built strings, so no
+        // per-loop allocation (§4 rule 8).
+        telemetry.addLine(idBannerHtml);
         PanelsTelemetry.INSTANCE.getTelemetry().debug(idBanner);
         telemetry.addData("Loop Hz", loopTimer.getHz());
         telemetry.addData("Worst ms", loopTimer.getMaxLoopMs());
+        telemetry.addData("X in", follower.getPose().getX());
+        telemetry.addData("Y in", follower.getPose().getY());
         telemetry.addData("Heading °", Math.toDegrees(follower.getPose().getHeading()));
         telemetry.update();
     }

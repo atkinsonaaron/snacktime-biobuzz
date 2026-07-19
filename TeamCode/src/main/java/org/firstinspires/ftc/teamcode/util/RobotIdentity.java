@@ -74,10 +74,14 @@ public final class RobotIdentity {
             }
         }
 
+        RobotIdentity id = new RobotIdentity(resolved, raw);
+
         // Loud in the RC log so the exact name is on record (and so the FIRST on-robot run tells us
-        // the precise string, in case the returned format ever surprises us).
-        RobotLog.ii("RobotIdentity", "network name=\"%s\" resolved to %s", raw, resolved);
-        return new RobotIdentity(resolved, raw);
+        // the precise string, in case the returned format ever surprises us). Logs the literal
+        // banner text too, so a post-match RC-log read shows exactly what was on the Driver Station.
+        RobotLog.ii("RobotIdentity", "network name=\"%s\" resolved to %s — banner: %s",
+                raw, resolved, id.banner());
+        return id;
     }
 
     public boolean isCompetition() { return robot == Robot.COMPETITION; }
@@ -94,5 +98,27 @@ public final class RobotIdentity {
             default:          return "ROBOT: *** UNKNOWN *** name=[" + networkName
                                      + "] — expected ...-C-RC or ...-T-RC";
         }
+    }
+
+    /**
+     * Same banner, sized up for the Driver Station panel via a subset of HTML tags (FTC SDK
+     * {@code Telemetry.DisplayFormat.HTML} — see {@code Telemetry.java}'s own doc comment: "allows
+     * use of a subset of HTML tags, enabling rich text display, e.g. color & size"). The CALLER must
+     * set {@code telemetry.setDisplayFormat(Telemetry.DisplayFormat.HTML)} once at init for this to
+     * render as intended — otherwise the tags show up as literal text.
+     *
+     * PANELS DOES NOT USE THIS — Panels' telemetry is a different channel with no HTML display-format
+     * concept; keep using {@link #banner()} (plain) for {@code PanelsTelemetry…debug()}.
+     *
+     * Build ONCE at init and reuse, same as {@link #banner()} (§4 rule 8, no per-loop allocations).
+     */
+    public String bannerHtml() {
+        String color;
+        switch (robot) {
+            case COMPETITION: color = "red";   break;
+            case TESTBOT:     color = "green"; break;
+            default:          color = "orange"; break;
+        }
+        return "<font size=\"6\" color=\"" + color + "\"><b>" + banner() + "</b></font>";
     }
 }
