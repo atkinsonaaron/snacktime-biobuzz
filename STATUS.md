@@ -1,11 +1,13 @@
 # STATUS.md — where this project actually is
 
-**Last updated:** 2026-07-19 — **Two-robot support built.** Robot identity (from hub network name)
-+ robot-aware persistence: per-robot tuning/snapshot files, fail-closed on UNKNOWN, loud identity
-banner on Driver Hub + Panels. Lets us develop on a Test bot and deliver a reliable Competition
-robot off one codebase. (Earlier 2026-07-18: **Phase 0 complete, 6-of-6**; TeleOp direction + the
-`maxLoopMs` 1005→27ms spike both fixed.) **Coach's three-step plan:** Pedro PIDF tuning → Limelight
-object detection → Pedro path-follow to the detected object (see "Next action").
+**Last updated:** 2026-07-19 — **Two-robot support built + tuning-save helper.** Robot identity
+(from hub network name) + robot-aware persistence: per-robot **committed** tuning files, per-robot
+snapshots, fail-closed on UNKNOWN, loud identity banner on Driver Hub + Panels. `./save-tuning.sh`
+(auto-detects the robot) pulls a hub's tuning into `tuning/` to commit. Lets us develop on a Test
+bot and deliver a reliable Competition robot off one codebase. (Earlier 2026-07-18: **Phase 0
+complete, 6-of-6**; TeleOp direction + the `maxLoopMs` 1005→27ms spike both fixed.) **Next-session
+plan (ordered):** confirm hub identity on-hub → test-bot Pedro tuning → confirm JSON save workflow →
+Limelight detection → Pedro path-follow to the ball (see "Next action").
 
 **Read `CLAUDE.md` first** — that's the charter (rules + architecture) and it governs everything.
 This file is only the *current state*: what's verified, what's left, and what to do next. Keep it
@@ -61,10 +63,12 @@ of checking. Verify, don't assume.
 - **HeadingCorrector**: opt-in PIDF heading hold (disabled by default; enable via
   `Drivetrain.headingCorrectionEnabled`)
 - **Servos**: `ServoUtil.degreesToPositionClamped(deg, min, max, range)` — soft limits + degrees API
-- **Tuning backup**: `Persistence.saveTuning()` / `loadAndApplyTuning(telemetry)` — dashboard
-  values saved on every stop (now including loop-time stats), restored on every init; Driver Hub
-  shows `LOADED TUNING FROM FILE`. Scans a `TUNING_CLASSES` registry so each `@Configurable`
-  subsystem's own tunables are captured automatically (namespaced `ClassName.fieldName`)
+- **Per-robot tuning backup**: `Persistence.saveTuning(id)` / `loadAndApplyTuning(id, telemetry)` —
+  dashboard values saved on every stop (incl. loop-time stats), restored on every init, into the
+  robot's own file (`comp_tuning.json` / `testbot_tuning.json`); Driver Hub shows `LOADED <ROBOT>
+  TUNING`. Scans a `TUNING_CLASSES` registry (namespaced `ClassName.fieldName`). Canonical = the
+  **committed** copies in `tuning/`; back them up with **`./save-tuning.sh`** (auto-detects the robot,
+  pulls the hub file into `tuning/`) then commit — never transcribing numbers into source
 - **Build manifest**: `build-manifest.json` written at repo root on every build (Gradle task) —
   hardware names scanned from source automatically, tunable source defaults included
 - **Hub log auto-cleanup**: `LogCleanup.maybeRun()` runs at every OpMode init, deletes matchlogs and
@@ -97,60 +101,62 @@ Verified via `./gradlew :TeamCode:dependencies` and by reading `TeamCode/build.g
 
 ---
 
-## Next action — confirm robot identity on-hub, then the coach's three-step plan (2026-07-18)
+## Next action — ordered plan for the next session (set 2026-07-19)
 
 **Phase 0 is done** — the whole generation-first loop (AI writes code → hot reload → live tune →
-observe on real telemetry → persist a record) is proven end to end on real hardware. Next up is
-real feature work, in this order.
+observe on real telemetry → persist a record) is proven end to end on real hardware. Aaron's
+priority order for what's next:
 
-**Step 0 — Confirm robot identity works on the real hubs (do first, quick).** The robot-aware
-tuning/snapshot system is built and unit-tested, but the on-hub behavior hasn't been verified yet:
+**Step 1 — Confirm the hub Wi-Fi name / identity strategy works on the real hubs (do first).** The
+robot-aware tuning/snapshot system is built and unit-tested, but the on-hub behavior hasn't been
+verified yet:
 - Name each Control Hub in the **REV Hardware Client** — competition `34672-C-RC`, test `34672-T-RC`
-  — and **reboot** (see `WORKFLOW.md` §11).
-- Run any OpMode on each hub and confirm the **`ROBOT: COMPETITION` / `ROBOT: TEST BOT`** banner
-  shows correctly (first line, Driver Hub **and** Panels — the Panels rendering is the part we're
-  least sure of, so eyeball it).
-- Confirm the resolved value is right: check the RC log line `network name="…" resolved to …`, and
-  that the pulled snapshot is named `snacktime_snapshot_COMPETITION.json` / `_TESTBOT.json` with a
-  matching `robot` field. This also confirms the exact string `getDeviceName()` returns on a Control
-  Hub (with/without the `-RC` suffix) — the one thing we couldn't verify off-robot.
-- Sanity-check fail-closed: a hub whose name matches neither should show `ROBOT: *** UNKNOWN ***`
-  and load no tuning.
+  — and **reboot** (see `WORKFLOW.md` §11). (Only the test bot exists today; name it now.)
+- Run any OpMode and confirm the **`ROBOT: TEST BOT`** banner shows correctly (first line, Driver
+  Hub **and** Panels — the Panels rendering is the part we're least sure of, so eyeball it).
+- Confirm the resolved value: check the RC log line `network name="…" resolved to …`, and that the
+  pulled snapshot is named `snacktime_snapshot_TESTBOT.json` with a matching `robot` field. This also
+  confirms the exact string `getDeviceName()` returns on a Control Hub (with/without the `-RC`
+  suffix) — the one thing we couldn't verify off-robot.
+- Sanity-check fail-closed: an unnamed hub should show `ROBOT: *** UNKNOWN ***` and load no tuning.
 
-**Step 1 — PIDF-tune Pedro path following (in progress).** The `Line` test drifted on its first
-run (expected, untuned). Work through `Tuning` → `Manual`: Translational Tuner, Heading Tuner,
-Drive Tuner, Centripetal Tuner, one at a time (§6 "one change at a time"), then re-run `Line`/
-`Triangle`/`Circle` to confirm tracking tightens up. Put good values into `Constants.java` and
-commit. **Do this before Step 3** — path-follow accuracy depends on the Follower tracking well.
-- **When the test bot is tuned and a competition robot exists, wire the per-robot Pedro sets** (the
-  decided model above): rename the current constants to `compFollowerConstants`, add
-  `testFollowerConstants` (+ comp/test `PinpointConstants`), and switch on `RobotIdentity` in
-  `createFollower(hardwareMap, robotId)`. Not now — with only one robot there'd be two identical
-  sets. Tune the current robot as the comp set first.
+**Step 2 — Tune the Test Bot's Pedro path following.** The `Line` test drifted on its first run
+(expected, untuned). Work through `Tuning` → `Manual`: Translational Tuner, Heading Tuner, Drive
+Tuner, Centripetal Tuner, one at a time (§6 "one change at a time"), then re-run `Line`/`Triangle`/
+`Circle` to confirm tracking tightens up. Put good values into `Constants.java` and commit.
+- **When a competition robot also exists, wire the per-robot Pedro sets** (the decided model above):
+  rename the current constants to `compFollowerConstants`, add `testFollowerConstants` (+ comp/test
+  `PinpointConstants`), and switch on `RobotIdentity` in `createFollower(hardwareMap, robotId)`. Not
+  now — with only one robot there'd be two identical sets. Tune the current robot as the comp set.
 
-**Step 2 — Limelight object detection (not started).** Nothing exists yet beyond TODOs/docstring
-examples (`SystemsCheck.java` has a `// TODO: add sensor checks — Limelight reachable`;
-`StaleWatcher.java` and `diagnostics/Problem.java` use "Limelight" only as illustrative
-doc-comment examples, not real code). This is greenfield: a `Vision` (or `Limelight`) subsystem
-needs to be built from scratch, in `subsystems/`, following the four-layer boundary (§3) — it owns
-the Limelight hardware and exposes intent-level methods like `hasTarget()` /
-`getTargetOffset()`. Charter guidance already in place: detection runs **on the Limelight, never
-the Control Hub** (§4 rule 4), and its job is **relative aiming, not pose** — never blended into
-the Pinpoint pose estimate (§3, §5 graceful-degradation).
+**Step 3 — Confirm the JSON tuning download/save workflow end-to-end.** Prove the per-robot tuning
+loop actually works round-trip before relying on it: on the test bot, live-tune a dashboard value in
+Panels (e.g. `Drivetrain.driveSpeedCap`), stop the OpMode, then run **`./save-tuning.sh`** (with the
+hub connected) → confirm it auto-detects TEST BOT, pulls `testbot_tuning.json` into `tuning/`, and
+`git status` shows the change → commit + push. Then power-cycle the hub and confirm the value
+reloads (`LOADED TESTBOT TUNING …` on the Driver Hub). That closes the "both robots' tuning is
+durably saved" guarantee.
+
+**Step 4 — Limelight object detection (greenfield).** Nothing exists yet beyond TODOs/docstring
+examples (`SystemsCheck.java` `// TODO: … Limelight reachable`; `StaleWatcher.java` /
+`diagnostics/Problem.java` use "Limelight" only as illustrative examples). Build a `Vision` (or
+`Limelight`) subsystem from scratch in `subsystems/`, following the four-layer boundary (§3): it owns
+the Limelight hardware and exposes intent-level methods like `hasTarget()` / `getTargetOffset()`.
+Charter guidance already set: detection runs **on the Limelight, never the Control Hub** (§4 rule 4);
+its job is **relative aiming, not pose** — never blended into the Pinpoint estimate (§3, §5).
 - One Limelight 3A (§10). The neural-net model is its own artifact (does not hot-reload via Sloth);
-  since there's a single camera, model iteration and competition use share it — validate a new model
-  before a competition, deploy it deliberately, and keep the previous model to roll back to (§10).
-- `util/StaleWatcher.java` is ready to wire in immediately for "Limelight hasn't updated in
-  500ms → treat as lost, don't act on stale data."
+  the single camera is shared between model iteration and competition — validate a new model before a
+  competition, deploy deliberately, keep the previous model to roll back to (§10).
+- `util/StaleWatcher.java` is ready to wire in for "Limelight hasn't updated in 500ms → treat as
+  lost, don't act on stale data" (§5 graceful degradation).
 
-**Step 3 — Pedro path following to the detected Limelight target (not started, depends on Steps
-1 & 2).** Once the Follower is tuned and Vision reports a target, compose them: the Limelight
-gives a *relative* offset to the target (§3 — not a field pose), so this likely means either (a)
-converting that relative offset into a field-pose target for a new Pedro path built at runtime, or
-(b) a closed-loop aim/drive command that re-targets as the offset updates. Build this as a new
-`Command` (commands/ layer, §3) composing `FollowPathCommand` and the new Vision subsystem — not a
-hand-rolled state machine. Decide the exact approach when Step 2 exists and we know what the
-Limelight pipeline actually reports.
+**Step 5 — Pedro path following to the detected ball (depends on Steps 2 & 4).** The scoring element
+is Pollen (~3in balls). Once the Follower is tuned and Vision reports a target, compose them: the
+Limelight gives a *relative* offset (§3 — not a field pose), so this likely means either (a)
+converting that offset into a field-pose target for a runtime-built Pedro path, or (b) a closed-loop
+aim/drive command that re-targets as the offset updates. Build it as a new `Command` (commands/
+layer, §3) composing `FollowPathCommand` and the Vision subsystem — not a hand-rolled state machine.
+Decide the exact approach once Step 4 exists and we know what the Limelight pipeline actually reports.
 
 **Pre-season opportunity:** order Pollen from AndyMark and build the goBILDA StarterBot Base so
 future work can happen against real game pieces before the September 12, 2026 kickoff.
@@ -429,14 +435,16 @@ Managed via `claude.ai/code/routines`:
 - **Kieran & Elijah (students)** are the code-level directors. Per the relaxed Explain-It Gate,
   they can handle sophisticated patterns — but when they don't understand something, teach them,
   don't strip it out.
-- **Recent commits** worth being aware of:
-  - `7ef874b` — hub log auto-cleanup (14-day)
-  - `84cca60` — snapshots record loop-time stats
-  - `140d077`–`c0b771a` — tunables reorganized: mechanism values into subsystem files, deadzone
-    into `JoystickCurve`
-  - `d0fec73` — Pedro localization set up and proven live on-robot (offsets, robot mass, field viz)
-  - `bb096bb` — 11 patterns ported from decode-2025; Explain-It Gate relaxed
-- **Working tree is clean** — everything through `7ef874b` is committed. Two stray untracked
-  directories (`META-INF/`, `com/pedropathing/...` — an accidentally-extracted Pedro sources jar)
-  were found and deleted 2026-07-18; not committed since they were never tracked.
+- **Repo is on the `snacktime-robotics-34672` GitHub org** (private, Free plan → no enforced branch
+  protection; CI runs unit tests on push). Everything committed + pushed; working tree clean.
+- **Recent commits** worth being aware of (newest first):
+  - `dd8c00c` — `save-tuning.sh` auto-detects the robot
+  - `5621ac1` — **finalized two-robot tuning model:** committed per-robot JSON files are canonical,
+    no transcription (reversed the earlier "test = gitignored scratch" cut)
+  - `73a1ecc` — robot-aware persistence (per-robot tuning/snapshot files, fail-closed); one Limelight
+  - identity work (`RobotIdentity`, loud banner) landed just before that
+  - `2734cd3` — fixed the `maxLoopMs` outlier; earlier same day: Phase 0 closed, TeleOp direction fix
+- **Two-robot model is the big recent design** — read the "Decisions still standing" entry and
+  `CLAUDE.md` §6/§7/§10 before touching tuning/persistence. Key point: canonical tuning = committed
+  per-robot files in `tuning/`; Pedro stays in code constant sets (decided, not yet built).
 - **Do not commit unless asked.** Aaron controls when commits happen.

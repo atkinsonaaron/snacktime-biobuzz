@@ -19,6 +19,14 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-19 (continued, handoff prep)
+- **Refreshed `STATUS.md` for session handoff.** "Next action" reordered to Aaron's stated priority:
+  (1) confirm hub Wi-Fi identity on-hub, (2) tune the Test Bot's Pedro, (3) confirm the JSON tuning
+  save/download workflow end-to-end via `./save-tuning.sh`, (4) Limelight object detection, (5) Pedro
+  path-follow to the ball. Added the `save-tuning.sh` helper to the capabilities list and the tuning
+  description, and refreshed the handoff notes (recent commits, org, two-robot model pointer).
+  `project_next_phase_plan` memory synced to the same 5-step order. (`STATUS.md`)
+
 ## 2026-07-19 (continued, save helper auto-detect)
 - **`save-tuning.sh` now auto-detects which robot from the connected hub.** Just run `./save-tuning.sh`
   (no argument) after tuning — it reads the per-robot snapshot filename the hub writes to tell comp
