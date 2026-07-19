@@ -19,6 +19,9 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-18 (continued, ninth pass)
+- **Automatic hub log cleanup every 14 days.** New `LogCleanup.maybeRun()` runs at every OpMode init but only actually does work when 14+ days have passed since the last cleanup (tracked via a `last_log_cleanup.txt` stamp file). Deletes matchlog .log/.txt files and stray .csv files older than 14 days so hub storage doesn't fill up over a season. Wired into all three OpModes. Age- and extension-guarded; snapshot/tuning JSONs are safe by construction. CLAUDE.md §14 updated. (`util/LogCleanup.java`, `opmodes/TeleOpExample.java`, `opmodes/AutonomousExample.java`, `opmodes/SystemsCheck.java`, `CLAUDE.md`)
+
 ## 2026-07-18 (continued, eighth pass)
 - **Snapshots now capture loop-time stats (avgLoopHz, avgLoopMs, maxLoopMs).** Each snapshot records the OpMode's smoothed average loop rate and worst-case cycle time via a new `Snapshot.captureLoop(LoopTimer)` helper, so we can watch loop-time trends across sessions and catch regressions caused by code changes (§0 prime directive). Wired into TeleOpExample and AutonomousExample. Also swept Persistence docstrings that still said "TuningConfig statics" from before the multi-class registry — now correctly say "registered tunables." (`util/Persistence.java`, `opmodes/TeleOpExample.java`, `opmodes/AutonomousExample.java`)
 

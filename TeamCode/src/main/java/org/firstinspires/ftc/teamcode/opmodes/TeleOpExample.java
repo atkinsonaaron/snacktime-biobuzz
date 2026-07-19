@@ -11,6 +11,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.Drivetrain;
 import org.firstinspires.ftc.teamcode.util.JoystickCurve;
 import org.firstinspires.ftc.teamcode.util.BulkReads;
+import org.firstinspires.ftc.teamcode.util.LogCleanup;
 import org.firstinspires.ftc.teamcode.util.LoopTimer;
 import org.firstinspires.ftc.teamcode.util.Persistence;
 
@@ -35,6 +36,7 @@ public class TeleOpExample extends CommandOpMode {
         // MANUAL bulk caching — the biggest lever on loop time (section 0, section 4 rule 1).
         bulkReads = new BulkReads(hardwareMap);
         Persistence.loadAndApplyTuning(telemetry);
+        LogCleanup.maybeRun(telemetry); // fires once every 14 days, silent otherwise
 
         drivetrain = new Drivetrain(hardwareMap);
         driver = new GamepadEx(gamepad1);

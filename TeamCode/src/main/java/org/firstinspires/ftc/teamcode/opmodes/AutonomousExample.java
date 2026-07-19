@@ -13,6 +13,7 @@ import org.firstinspires.ftc.teamcode.config.TuningConfig;
 import org.firstinspires.ftc.teamcode.diagnostics.DiagnosticsCenter;
 import org.firstinspires.ftc.teamcode.subsystems.Drivetrain;
 import org.firstinspires.ftc.teamcode.util.BulkReads;
+import org.firstinspires.ftc.teamcode.util.LogCleanup;
 import org.firstinspires.ftc.teamcode.util.LoopTimer;
 import org.firstinspires.ftc.teamcode.util.Persistence;
 
@@ -48,6 +49,7 @@ public class AutonomousExample extends CommandOpMode {
         // Hardware first, so the menu can render while init is running.
         bulkReads = new BulkReads(hardwareMap);
         Persistence.loadAndApplyTuning(telemetry);
+        LogCleanup.maybeRun(telemetry); // fires once every 14 days, silent otherwise
         drivetrain = new Drivetrain(hardwareMap);
         menu = new AutonMenu(telemetry);
 

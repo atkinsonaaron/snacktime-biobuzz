@@ -433,6 +433,9 @@ never let diagnostics tax the match loop.
 - **Persistent RC match logs** — the Robot Controller writes durable log files to the hub for every
   OpMode run (errors, system events). They survive disconnection — pull them via ADB or the hub's
   Manage page to review a qualifier match hours later. This is logcat's blind spot, covered.
+  Auto-cleanup: `LogCleanup.maybeRun()` runs at every OpMode init and, once every 14 days, deletes
+  matchlogs and stray CSVs older than 14 days so hub storage doesn't fill up over a season.
+  Age- and extension-guarded; snapshot / tuning JSONs are safe by construction.
 - **Datalogger** — appends chosen signals to a CSV each loop, giving a time-series you can plot to
   find the exact instant a value spiked. Distinct from snapshots (§7, once at start/stop) and live
   telemetry (§8). It is the *one* deliberate exception to "no file I/O in the loop" (§7): the writer
