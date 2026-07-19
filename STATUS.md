@@ -120,9 +120,13 @@ tuning/snapshot system is built and unit-tested, but the on-hub behavior hasn't 
 **Step 1 — PIDF-tune Pedro path following (in progress).** The `Line` test drifted on its first
 run (expected, untuned). Work through `Tuning` → `Manual`: Translational Tuner, Heading Tuner,
 Drive Tuner, Centripetal Tuner, one at a time (§6 "one change at a time"), then re-run `Line`/
-`Triangle`/`Circle` to confirm tracking tightens up. Promote good values back into
-`Constants.java` (`followerConstants`) once dialed in. **Do this before Step 3** — path-follow-to-
-target accuracy depends on the underlying Follower already tracking well.
+`Triangle`/`Circle` to confirm tracking tightens up. Put good values into `Constants.java` and
+commit. **Do this before Step 3** — path-follow accuracy depends on the Follower tracking well.
+- **When the test bot is tuned and a competition robot exists, wire the per-robot Pedro sets** (the
+  decided model above): rename the current constants to `compFollowerConstants`, add
+  `testFollowerConstants` (+ comp/test `PinpointConstants`), and switch on `RobotIdentity` in
+  `createFollower(hardwareMap, robotId)`. Not now — with only one robot there'd be two identical
+  sets. Tune the current robot as the comp set first.
 
 **Step 2 — Limelight object detection (not started).** Nothing exists yet beyond TODOs/docstring
 examples (`SystemsCheck.java` has a `// TODO: add sensor checks — Limelight reachable`;
@@ -260,18 +264,30 @@ future work can happen against real game pieces before the September 12, 2026 ki
   history lives in the RC's persistent logs (`SNAPSHOT:` lines, 14-day retention via `LogCleanup`);
   the snapshot file is the fast-path "latest state" pull. (This is the *per-session* axis. It is NOT
   in tension with the *per-robot* filenames added 2026-07-19 below — different axis.)
-- **Two robots, one codebase — robot-aware persistence — built 2026-07-19.** The same commit runs on
-  the Competition robot and the Test bot; `util/RobotIdentity` reads the hub network name at init
-  (`34672-C-RC` → COMPETITION, `34672-T-RC` → TESTBOT, else UNKNOWN) and tuning/snapshot files are
-  chosen per-robot. Fail-closed: an UNKNOWN hub loads/saves no tuning and runs on the in-code
-  defaults (= competition values), loudly. In-code static defaults are the canonical COMPETITION
-  tuning (git backup); the test bot's `TESTBOT_SCRATCH_do_not_promote.json` stays on its hub, is
-  gitignored, and is never committed — students can tune the test bot freely without endangering
-  comp tuning. Promote to source only from the competition robot. Identity shows as a loud banner on
-  the Driver Hub + Panels and is recorded in every snapshot. Pure file-selection logic is unit-tested
-  (`PersistenceFileNamingTest`). See `CLAUDE.md` §6/§7/§10.
+- **Two robots, one codebase — robot-aware persistence — built 2026-07-19, model finalized same day.**
+  The same commit runs on the Competition robot and the Test bot; `util/RobotIdentity` reads the hub
+  network name at init (`34672-C-RC` → COMPETITION, `34672-T-RC` → TESTBOT, else UNKNOWN) and chooses
+  files per-robot. Fail-closed: an UNKNOWN hub loads/saves no tuning and runs on in-code fallback
+  defaults, loudly. Identity shows as a loud banner on the Driver Hub + Panels and is in every
+  snapshot. Pure file-selection logic is unit-tested (`PersistenceFileNamingTest`). See `CLAUDE.md`
+  §6/§7/§10, `WORKFLOW.md` §11, `tuning/README.md`.
+  - **Tuning model (finalized 2026-07-19, revised from the first cut):** canonical tuning is the
+    **committed per-robot files** `tuning/comp_tuning.json` and `tuning/testbot_tuning.json` — **both**
+    robots' tuning is saved in git, neither is disposable. Saving = pull the hub file into `tuning/`
+    and commit it (a whole-file commit, **no transcribing numbers into source**). In-code defaults
+    are only a fallback. This *replaced* the first-cut "test = gitignored scratch, canonical = in-code
+    defaults, promote-by-transcription" model — which rested on a wrong assumption that test tuning was
+    disposable, and leaned on commit discipline Aaron didn't trust. Files are separate, so one robot's
+    tuning can never corrupt the other's. **No drift warning** (decided — keep it simple).
+  - **Pedro constants stay in code, not the JSON (decided 2026-07-19):** per-robot constant sets
+    `compFollowerConstants`/`testFollowerConstants` (+ comp/test `PinpointConstants`) in
+    `pedroPathing/Constants.java`, selected by identity when the follower is built; both committed.
+    Kept out of the JSON because Pedro's tuners print numbers you record (rare, few values), the
+    follower is built once at init, and holding whole `FollowerConstants` objects is robust across
+    Pedro version bumps. **Not yet implemented** — build when the robots are actually tuned (no distinct
+    values exist yet; two identical sets today would be premature). See "Next action" Step 1.
   - **On-hub setup still required:** name the hubs in the REV Hardware Client — comp `34672-C-RC`,
-    test `34672-T-RC` — then reboot. Until then both resolve UNKNOWN (safe: code defaults, loud).
+    test `34672-T-RC` — then reboot. Until then both resolve UNKNOWN (safe: fallback defaults, loud).
   - **On-robot confirmation pending:** the exact string `getDeviceName()` returns on a Control Hub
     (with/without the `-RC` suffix) — the code logs the raw name + matches on the `-C-RC`/`-T-RC`
     suffix; first on-hub run confirms the format. Also confirm the identity banner renders in Panels.

@@ -263,19 +263,30 @@ destabilize the robot. Therefore:
 ### Two robots, one codebase — tuning ownership — NON-NEGOTIABLE
 We run a **Competition robot** and a **Test bot** off the *same commit* (never forked). The core
 hardware (motors, servos) is identical; mechanisms may or may not be bolted on the test bot; and
-the two genuinely differ in drivetrain/Pedro tuning because mass and CG differ. The code stays
-one codebase and figures out at runtime which robot it's on, via `util/RobotIdentity` (read from
-the hub network name — see §10). Rules:
+the two genuinely differ in drivetrain/Pedro tuning because mass and CG differ. The code stays one
+codebase and figures out at runtime which robot it's on, via `util/RobotIdentity` (read from the
+hub network name — see §10). Two tuning categories, handled differently *on purpose*:
 
-- **The in-code static defaults are the COMPETITION robot's canonical tuning**, and git is their
-  backup. Promote dialed-in values back to source **only from the competition robot.**
-- **The test bot's live tuning stays on the test bot's hub** in a deliberately loud file
-  (`TESTBOT_SCRATCH_do_not_promote.json`) — it is gitignored and **must never be committed.** This
-  is what lets students tune the test bot freely without endangering the competition tuning.
-- **Session tuning files are per-robot and never shared:** comp → `comp_tuning.json`, test →
-  `TESTBOT_SCRATCH_do_not_promote.json`. An **UNKNOWN** hub (name not `...-C-RC` / `...-T-RC`)
-  **loads and saves no tuning at all** (fail closed) and runs on the in-code = competition defaults,
-  saying so loudly. An unidentified hub is never assumed to be the competition robot.
+**Dashboard tunables** (`@Configurable` statics — `Drivetrain`, `JoystickCurve`, `TuningConfig`):
+- **Each robot has its own committed tuning file**, which is the canonical, git-backed value:
+  `tuning/comp_tuning.json` and `tuning/testbot_tuning.json`. **Both robots' tuning is saved** —
+  neither is disposable.
+- At init a robot reads *its own* file from its hub (comp → `comp_tuning.json`, test →
+  `testbot_tuning.json`); on stop it writes it. The files are separate, so tuning one robot can
+  never touch the other's values.
+- **Saving = commit the file the robot wrote** (pull the hub file into `tuning/`, commit). It is a
+  **whole-file commit — never transcribe individual numbers into source.** The in-code static
+  defaults are only a last-resort fallback for a fresh/reflashed hub before its file is restored.
+- An **UNKNOWN** hub (name not `...-C-RC` / `...-T-RC`) **loads and saves no tuning at all** (fail
+  closed) and runs on the in-code fallback defaults, saying so loudly. Never assumed to be comp.
+
+**Pedro constants** (follower velocities/PIDFs, pod offsets — `pedroPathing/Constants.java`):
+- Kept as **per-robot constant sets in code** (`compFollowerConstants` / `testFollowerConstants`,
+  and comp/test `PinpointConstants`), selected by `RobotIdentity` when the follower is built. Both
+  sets are committed to git, so both robots' path tuning is saved and reviewable.
+- Deliberately *not* in the JSON files: Pedro's tuners print a number you record into the constant
+  set (rare, few values), the follower is built once at init, and holding whole `FollowerConstants`
+  objects stays robust across Pedro version bumps. `mecanumConstants` (motor names/dirs) is shared.
 
 ---
 
@@ -308,8 +319,9 @@ file can never silently override reviewed code:
 - it **falls back** to code defaults if the file is missing or corrupt,
 - it is **per-robot and fail-closed** — the file loaded is chosen by `RobotIdentity`; an UNKNOWN
   hub loads nothing (see §6),
-- values loaded this way are **promoted into git before the next session, from the competition
-  robot** — the committed code stays the canonical source of truth (§6).
+- it is **saved by committing the file itself** — the canonical tuning is the committed per-robot
+  file in `tuning/` (both robots), not the in-code defaults; you pull the hub file and commit it,
+  never transcribing numbers into source (§6).
 
 ### Rules — NON-NEGOTIABLE
 - **File I/O never happens in the main loop.** Writes and reads occur only on init, on stop, or on

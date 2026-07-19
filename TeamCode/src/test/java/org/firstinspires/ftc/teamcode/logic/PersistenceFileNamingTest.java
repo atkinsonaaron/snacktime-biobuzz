@@ -27,8 +27,8 @@ public class PersistenceFileNamingTest {
     }
 
     @Test
-    public void testbot_getsLoudScratchFile() {
-        assertEquals("TESTBOT_SCRATCH_do_not_promote.json",
+    public void testbot_getsItsOwnFile() {
+        assertEquals("testbot_tuning.json",
                 Persistence.tuningFileFor(RobotIdentity.Robot.TESTBOT));
     }
 

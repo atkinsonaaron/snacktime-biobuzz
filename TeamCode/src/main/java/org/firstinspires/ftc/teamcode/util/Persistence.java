@@ -48,28 +48,33 @@ import java.util.Map;
  *
  * THE TWO-ROBOT MODEL (why the files are per-robot):
  *   The SAME commit runs on both the Competition robot and the Test bot (one codebase, never
- *   forked). They differ mainly in drivetrain/Pedro tuning (mass & CG differ). So:
- *     - Competition robot -> {@code comp_tuning.json}  (its session tuning)
- *     - Test bot          -> {@code TESTBOT_SCRATCH_do_not_promote.json}  (scratch; loud on purpose)
+ *   forked). They differ mainly in drivetrain tuning (mass & CG differ). Each robot keeps its own
+ *   tuning file, on its own hub, read at init and written on stop:
+ *     - Competition robot -> {@code comp_tuning.json}
+ *     - Test bot          -> {@code testbot_tuning.json}
  *     - UNKNOWN identity   -> NO tuning file loaded or saved (fail closed). An unidentified hub is
  *       NEVER assumed to be the comp robot; it runs on the in-code defaults and says so loudly.
- *   CANONICAL tuning = the in-code static defaults, which represent the COMPETITION robot and are
- *   the git backup. Promote dialed-in values back to source FROM THE COMPETITION ROBOT only; the
- *   test bot's scratch file stays on its hub and is never committed (it's gitignored). This is what
- *   lets the kids tune the test bot freely without ever endangering the competition tuning.
+ *   Because the files are separate, nothing you tune on one robot can ever touch the other's values.
+ *
+ *   CANONICAL tuning = the COMMITTED per-robot files in git (repo `tuning/comp_tuning.json` and
+ *   `tuning/testbot_tuning.json`). "Saving" a robot's tuning = pull its hub file into the repo and
+ *   commit it — a whole-file commit, NO transcribing numbers into source. Both robots' tuning is
+ *   backed up this way; neither is disposable. The in-code static defaults are only a LAST-RESORT
+ *   fallback (a brand-new or freshly-reflashed hub before its file has been restored).
  *
  * HARD RULES (CLAUDE.md §7):
  *   - File I/O NEVER happens in the main loop — only on init, stop, or explicit button press.
  *   - loadAndApplyTuning MUST telemeter loudly when it finds and applies a file.
- *   - git is the real backup. A hub re-flash wipes hub files; git doesn't.
+ *   - git is the real backup. A hub re-flash wipes hub files; the committed `tuning/` files don't.
  */
 public final class Persistence {
 
     private static final String TAG = "Persistence";
 
-    // Tuning file names, per robot. UNKNOWN deliberately has none — fail closed.
+    // Tuning file names, per robot (the on-hub filenames; the committed copies live in repo tuning/).
+    // UNKNOWN deliberately has none — fail closed.
     static final String COMP_TUNING_FILE    = "comp_tuning.json";
-    static final String TESTBOT_TUNING_FILE = "TESTBOT_SCRATCH_do_not_promote.json";
+    static final String TESTBOT_TUNING_FILE = "testbot_tuning.json";
 
     // All @Configurable classes whose public static fields are included in session persistence.
     // TuningConfig holds cross-cutting/drivetrain values; each mechanism subsystem holds its own.
@@ -213,8 +218,8 @@ public final class Persistence {
      * Call on every OpMode init. NEVER in the loop.
      *
      * FAIL CLOSED: if identity is UNKNOWN, loads NOTHING and says so loudly — the robot runs on the
-     * in-code defaults (which are the COMPETITION values). An unidentified hub is never given the
-     * comp robot's saved tuning by accident, nor the test bot's.
+     * in-code fallback defaults. An unidentified hub is never given the comp robot's saved tuning by
+     * accident, nor the test bot's.
      *
      * @return true if a tuning file was found and applied; false if running from code defaults.
      */
@@ -222,7 +227,7 @@ public final class Persistence {
         String fileName = tuningFileFor(id.robot);
         if (fileName == null) {
             String msg = "ROBOT UNKNOWN [" + id.networkName + "] — NO tuning file loaded; running on "
-                    + "code defaults (= competition values). Name the hub ...-C-RC or ...-T-RC.";
+                    + "in-code fallback defaults. Name the hub ...-C-RC or ...-T-RC.";
             if (telemetry != null) telemetry.addLine(msg);
             RobotLog.i("Persistence: %s", msg);
             return false;
@@ -230,10 +235,11 @@ public final class Persistence {
         try {
             File file = AppUtil.getInstance().getSettingsFile(fileName);
             if (!file.exists()) {
-                // No session file yet for this robot — code defaults apply. On the test bot those are
-                // the competition values until it's tuned; be honest about it rather than silent.
+                // No tuning file on this hub yet — running on the in-code fallback defaults. Happens
+                // on a brand-new or freshly-reflashed hub before its committed tuning/ file is
+                // restored (adb push). Be honest about it rather than silent.
                 String msg = String.format(Locale.US,
-                        "%s: no tuning file yet (%s) — running on code defaults", id.robot, fileName);
+                        "%s: no tuning file yet (%s) — running on fallback defaults", id.robot, fileName);
                 if (telemetry != null) telemetry.addLine(msg);
                 RobotLog.i("Persistence: %s", msg);
                 return false;

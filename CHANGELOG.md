@@ -19,6 +19,29 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-19 (continued, tuning model finalized)
+- **Finalized the two-robot tuning model: committed per-robot files are canonical; both robots saved.**
+  This *revises* the same-day robot-aware persistence below. The first cut treated the test bot's
+  tuning as disposable scratch (`TESTBOT_SCRATCH_do_not_promote.json`, gitignored) with the in-code
+  defaults as the sole canonical, "promoted" by hand-transcribing numbers into source. Two problems:
+  Aaron needs **both** robots' tuning saved (not just comp), and the transcribe-into-code step relies
+  on commit discipline he (rightly) doesn't trust. New model: each robot's tuning is a **committed
+  file** — `tuning/comp_tuning.json` and `tuning/testbot_tuning.json` — and "saving" is just
+  committing the whole file the robot already wrote (pull from hub → `git commit`), never copying
+  numbers into `.java`. In-code defaults drop to a fallback. Files are separate, so one robot's tuning
+  can't corrupt the other's. Renamed the test file (`testbot_tuning.json`), reversed the gitignore
+  (tuning files are now committed; snapshots stay ignored), added `tuning/README.md` with the
+  pull/commit and restore commands, and updated the unit test. No drift warning (kept simple, decided).
+  (`util/Persistence.java`, `.gitignore`, `tuning/README.md`, `CLAUDE.md` §6/§7, `WORKFLOW.md` §11,
+  `README.md`, `PersistenceFileNamingTest`)
+- **Decided: Pedro constants stay in code, as per-robot sets — not folded into the tuning JSON.**
+  `pedroPathing/Constants.java` will hold `compFollowerConstants`/`testFollowerConstants` (+ comp/test
+  `PinpointConstants`), picked by `RobotIdentity` when the follower is built; both committed to git.
+  Kept out of the JSON because Pedro's tuners print numbers you record (rare, few values), the follower
+  is built once at init, and holding whole `FollowerConstants` objects survives Pedro version bumps.
+  Documented in CLAUDE.md §6; **implemented later** — with only one robot today, two identical sets
+  would be premature. (`CLAUDE.md` §6, `STATUS.md`)
+
 ## 2026-07-19 (continued, docs 2)
 - **Set the next step: confirm robot identity on the real hubs.** STATUS.md "Next action" now leads
   with Step 0 — name the hubs `34672-C-RC` / `34672-T-RC`, reboot, and verify the `ROBOT:` banner,

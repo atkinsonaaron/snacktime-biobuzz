@@ -97,10 +97,10 @@ For every change:
 
 Use the cheapest tier that does the job (`CLAUDE.md` §6):
 
-- **Tuning a number** (powers, gains, timeouts) → change it live on the **dashboard**. No push.
-  Then promote the good value back into the subsystem's source and commit, or it's lost on restart.
-  **Two robots:** promote only from the *competition* robot — the test bot's tuning is scratch and
-  never committed (see §11).
+- **Tuning a number** (powers, gains, timeouts) → change it live on the **dashboard**. No push. The
+  robot saves it to its own hub file on stop; to back it up, pull that file into `tuning/` and commit
+  it — a whole-file commit, no copying numbers into source. **Two robots:** each keeps its own
+  committed file; both are saved (see §11).
 - **Changing logic/behavior** (teamcode) → **Sloth hot reload**, sub-second.
 - **Changing a dependency / library** → **STOP. Warn and confirm** with a human, then full install
   (`CLAUDE.md` §6, NON-NEGOTIABLE).
@@ -193,15 +193,47 @@ Every OpMode shows a loud banner, first line, on the Driver Hub **and** Panels:
   and runs on the in-code (competition) defaults. Fix the hub name (step 1 above). Systems Check
   also warns on this.
 
-### Tuning ownership — the rule that protects the competition robot
-- **The in-code defaults are the competition robot's canonical tuning**, backed up in git. When you
-  dial a value in on the **competition robot**, promote it back into source and commit (§8).
-- **Tune the test bot freely.** Its live values save to `TESTBOT_SCRATCH_do_not_promote.json` on the
-  test bot's hub — a deliberately loud name. It's **gitignored and must never be committed.** This is
-  what lets students experiment on the test bot without any risk to the competition tuning.
-- **Never promote test-bot values to source.** Promotion is a competition-robot action only.
-- Each robot keeps its own per-robot files (`comp_tuning.json`, `snacktime_snapshot_COMPETITION.json`,
-  etc.), so pulling both robots' files to one laptop never mixes them up.
+### Tuning ownership — how both robots stay saved, without transcription
+There are two kinds of tuning, saved two ways:
+
+**Dashboard values** (`@Configurable` — `Drivetrain`, `JoystickCurve`): each robot has its own
+committed file, `tuning/comp_tuning.json` / `tuning/testbot_tuning.json`, and **both are canonical
+and backed up in git** — neither is disposable.
+- Each robot reads *its own* file at init and writes it on stop. Separate files, so tuning one robot
+  never touches the other's values.
+- **To save: commit the file the robot wrote** — pull the hub file into `tuning/` and `git commit`.
+  It's a whole-file commit; you **never copy individual numbers into source code.** (See
+  `tuning/README.md` for the exact `adb pull` commands.)
+- The in-code defaults are only a last-resort fallback for a fresh/reflashed hub before its file is
+  restored (`adb push` the committed file back).
+
+**Pedro values** (velocities, PIDFs, pod offsets): per-robot constant sets in
+`pedroPathing/Constants.java` (`compFollowerConstants` / `testFollowerConstants`), both committed to
+git, picked by identity when the follower is built. You tune with Pedro's own OpModes, put the number
+into the right set, and commit — a few values, tuned rarely.
+
+### Worked example: tuning one value, `Drivetrain.headingP`
+The heading-hold gain genuinely wants to differ between robots — the loaded comp robot has more
+rotational inertia than a bare test chassis. Here's the whole lifecycle:
+
+1. **In code**, `Drivetrain.java` has `public static double headingP = 1.2;` — just a fallback
+   default now, not the canonical value.
+2. **At init**, each robot loads its own committed file over that default: the comp hub applies
+   `comp_tuning.json`, the test hub `testbot_tuning.json`. The `ROBOT:` banner tells you which you're
+   on.
+3. **On the test bot**, Kieran drags `headingP` to `0.8` live in Panels (no deploy). He stops the
+   OpMode → the value saves to `testbot_tuning.json` on the test hub. Power-cycle → `0.8` reloads.
+4. **To save it durably**, he pulls that file into `tuning/testbot_tuning.json` and commits it (one
+   `git commit`, no number-copying). Now the test bot's tuning is in git. Committing it touches
+   **only** the test file — the comp robot's `comp_tuning.json` is untouched.
+5. **The comp robot** works the same way, into its own file. Both robots end up saved in git,
+   independently, with no transcription and no way to corrupt each other.
+6. **Deploying the same commit** to either hub does **not** touch either hub's tuning file — each
+   robot keeps its own values even though the code is byte-identical.
+
+Edge cases: a **reflashed** hub falls back to the in-code defaults until you `adb push` its committed
+file back; an **unnamed** hub shows `ROBOT: *** UNKNOWN ***` and loads nothing. Both are safe, neither
+guesses.
 
 ### When you pull files off a hub
 Snapshots and tuning files are per-robot and self-describing (`..._COMPETITION.json` /
