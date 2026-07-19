@@ -19,6 +19,12 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-19 (continued, docs 2)
+- **Set the next step: confirm robot identity on the real hubs.** STATUS.md "Next action" now leads
+  with Step 0 — name the hubs `34672-C-RC` / `34672-T-RC`, reboot, and verify the `ROBOT:` banner,
+  the resolved value, the per-robot snapshot filename, and the fail-closed UNKNOWN case on-robot
+  (the on-hub behavior the unit tests can't cover). (`STATUS.md`)
+
 ## 2026-07-19 (continued, docs)
 - **Documented the two-robot workflow where people actually look for it.** New `WORKFLOW.md §11`
   "Two robots: identity & tuning" — the operational how-to a coach/student needs: name each hub in

@@ -97,11 +97,25 @@ Verified via `./gradlew :TeamCode:dependencies` and by reading `TeamCode/build.g
 
 ---
 
-## Next action — three-step plan set by the coach (2026-07-18)
+## Next action — confirm robot identity on-hub, then the coach's three-step plan (2026-07-18)
 
 **Phase 0 is done** — the whole generation-first loop (AI writes code → hot reload → live tune →
 observe on real telemetry → persist a record) is proven end to end on real hardware. Next up is
-real feature work, in this order:
+real feature work, in this order.
+
+**Step 0 — Confirm robot identity works on the real hubs (do first, quick).** The robot-aware
+tuning/snapshot system is built and unit-tested, but the on-hub behavior hasn't been verified yet:
+- Name each Control Hub in the **REV Hardware Client** — competition `34672-C-RC`, test `34672-T-RC`
+  — and **reboot** (see `WORKFLOW.md` §11).
+- Run any OpMode on each hub and confirm the **`ROBOT: COMPETITION` / `ROBOT: TEST BOT`** banner
+  shows correctly (first line, Driver Hub **and** Panels — the Panels rendering is the part we're
+  least sure of, so eyeball it).
+- Confirm the resolved value is right: check the RC log line `network name="…" resolved to …`, and
+  that the pulled snapshot is named `snacktime_snapshot_COMPETITION.json` / `_TESTBOT.json` with a
+  matching `robot` field. This also confirms the exact string `getDeviceName()` returns on a Control
+  Hub (with/without the `-RC` suffix) — the one thing we couldn't verify off-robot.
+- Sanity-check fail-closed: a hub whose name matches neither should show `ROBOT: *** UNKNOWN ***`
+  and load no tuning.
 
 **Step 1 — PIDF-tune Pedro path following (in progress).** The `Line` test drifted on its first
 run (expected, untuned). Work through `Tuning` → `Manual`: Translational Tuner, Heading Tuner,

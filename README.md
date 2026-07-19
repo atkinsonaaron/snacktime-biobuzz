@@ -73,4 +73,4 @@ scratch and never committed. A `ROBOT: …` banner shows on the Driver Hub and P
 
 ## The rule that keeps this safe
 Nothing goes on the competition robot unless Kieran or Elijah can explain what it does (CLAUDE.md §1).
-
+   
