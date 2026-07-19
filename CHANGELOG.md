@@ -19,6 +19,15 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-19 (continued, save helper)
+- **Added `save-tuning.sh` — one command to back up a robot's tuning.** A plain `git commit` doesn't
+  save tuning, because the values live on the hub, not the repo, until pulled in. `./save-tuning.sh
+  comp` (or `test`) does the `adb pull` of the right per-robot file into `tuning/` and shows what
+  changed; you then `git commit && push`. Has clear errors if adb is missing or no hub is connected.
+  It's committed to the repo (with the executable bit), so anyone who clones gets it — documented in
+  `tuning/README.md` and `WORKFLOW.md` §11, incl. the manual `adb pull` equivalent. (`save-tuning.sh`,
+  `tuning/README.md`, `WORKFLOW.md`)
+
 ## 2026-07-19 (continued, tuning model finalized)
 - **Finalized the two-robot tuning model: committed per-robot files are canonical; both robots saved.**
   This *revises* the same-day robot-aware persistence below. The first cut treated the test bot's

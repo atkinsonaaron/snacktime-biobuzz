@@ -201,9 +201,11 @@ committed file, `tuning/comp_tuning.json` / `tuning/testbot_tuning.json`, and **
 and backed up in git** — neither is disposable.
 - Each robot reads *its own* file at init and writes it on stop. Separate files, so tuning one robot
   never touches the other's values.
-- **To save: commit the file the robot wrote** — pull the hub file into `tuning/` and `git commit`.
-  It's a whole-file commit; you **never copy individual numbers into source code.** (See
-  `tuning/README.md` for the exact `adb pull` commands.)
+- **To save: commit the file the robot wrote** — a plain `git commit` is NOT enough, because the
+  values are on the hub, not in the repo. Pull the hub file into `tuning/` first, then commit. Use
+  the helper `./save-tuning.sh comp` (or `test`) with the hub connected, then `git commit && push`.
+  It's a whole-file commit; you **never copy individual numbers into source code.** (Details and the
+  manual `adb pull` equivalent: `tuning/README.md`.)
 - The in-code defaults are only a last-resort fallback for a fresh/reflashed hub before its file is
   restored (`adb push` the committed file back).
 
