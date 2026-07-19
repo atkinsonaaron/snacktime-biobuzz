@@ -28,27 +28,49 @@ start from the **SolversLib Quickstart** (ships SolversLib + Pedro), then:
 ## The tree (four layers, CLAUDE.md §3)
 ```
 teamcode/
-├── config/     TuningConfig.java     Live configurables — every tunable number (§6 Tier 1)
-├── hardware/   BuildInfo.java        Git hash + build time for snapshot traceability (§7/§12)
-├── logic/      IntakeLogic.java      PURE mode→power mapping, no hardware — unit-testable (§9)
-├── subsystems/ Intake.java           FLAGSHIP: single-motor active intake; enum + configurable + commands
-│               Drivetrain.java       Mecanum + per-wheel health telemetry (§5)
-├── util/       BulkReads.java        MANUAL bulk caching — ours to own; biggest loop-time lever (§0/§4)
-│               LoopTimer.java        Measures loop time; every OpMode telemeters it (§0/§4 rule 7)
-│               Persistence.java      JSON snapshot: auto-export + guarded load, git hash (§7)
-│               Datalogger.java       Buffered CSV time-series for debugging (§14)
-└── opmodes/    AutonomousExample.java Command tree (not a switch) + alliance/pose in one place (§3/§9)
-                TeleOpExample.java     Gamepad -> commands, minimal driver telemetry (§3/§8)
-                SystemsCheck.java      Pre-match diagnostic, plain LinearOpMode (§5)
+├── config/      TuningConfig.java        Cross-cutting flags (§6 Tier 1); mechanism tunables live in each subsystem
+│                AutonFieldTweaks.java    Shape for per-(field×alliance) pose deltas
+│                FieldTweaks.java         @Configurable matrix + lookup of those deltas
+├── hardware/    BuildInfo.java           Git hash + build time for snapshot traceability (§7/§12)
+├── subsystems/  Drivetrain.java          Mecanum + per-wheel health telemetry; owns its own tunables (§5/§6)
+│                GameMechanism.java       TEMPLATE: fill in per mechanism at kickoff (enum + configurable + commands)
+├── commands/    FollowPathCommand.java   Wraps a Pedro path as a CommandBase so autos compose as trees (§3)
+├── diagnostics/ DiagnosticsCenter.java   Central health reporting; drains to Driver Hub (§5)
+│                Problem.java, ProblemSeverity.java
+├── util/        BulkReads.java           MANUAL bulk caching — ours to own; biggest loop-time lever (§0/§4)
+│                LoopTimer.java           Measures loop time; every OpMode telemeters it (§0/§4 rule 7)
+│                RobotIdentity.java       Which robot am I? (comp vs test) from the hub network name (§6/§10)
+│                Persistence.java         Per-robot tuning + snapshot, git hash, robot-aware/fail-closed (§7)
+│                LogCleanup.java          Deletes matchlogs/CSVs >14 days; protects our JSONs (§14)
+│                Datalogger.java          Buffered CSV time-series for debugging (§14)
+│                ServoUtil, JoystickCurve, SlewRateLimiter, HeadingCorrector, Profiler, StaleWatcher, TelemetryMenu
+│                profile/                 AsymmetricMotionProfile (+ Constraints, State) — accel≠decel profile
+├── pedroPathing/ Constants.java          Follower/drivetrain/Pinpoint wiring; pod offsets (measured on-robot)
+│                Tuning.java              Pedro's tuning-OpMode menu (localization, PIDF, path tests)
+└── opmodes/     AutonomousExample.java   Command tree (not a switch) + alliance/pose menu in one place (§3/§9)
+                 TeleOpExample.java       Gamepad → commands, minimal driver telemetry, robot-ID banner (§3/§8)
+                 AutonMenu.java           Driver-Hub pre-match picker (alliance/pose/field/delay)
+                 SystemsCheck.java        Pre-match diagnostic, plain LinearOpMode (§5)
 
-test/logic/     IntakeLogicTest.java  Off-robot unit tests (`./gradlew :TeamCode:test`) (§9)
+test/logic/      Off-robot unit tests (`./gradlew :TeamCode:test`) for the pure logic (§9):
+                 JoystickCurveTest, SlewRateLimiterTest, StaleWatcherTest,
+                 AsymmetricMotionProfileTest, ServoUtilTest, PersistenceFileNamingTest
 ```
 
-## Start here (Phase 0, CLAUDE.md §13)
-1. Wire the config names in `TuningConfig` / subsystems to your Robot Controller configuration (§10).
+## Two robots, one codebase (CLAUDE.md §6/§7/§10, WORKFLOW.md §11)
+The same commit runs on the **Competition robot** and a **Test bot**. The code reads the hub network
+name (`34672-C-RC` → comp, `34672-T-RC` → test) via `util/RobotIdentity` and loads that robot's own
+tuning; an unnamed hub fails closed (loads nothing, runs on the in-code = competition defaults, says
+so loudly). In-code defaults are the competition canonical (git-backed); the test bot's tuning is
+scratch and never committed. A `ROBOT: …` banner shows on the Driver Hub and Panels.
+
+## Start here (Phase 0, CLAUDE.md §13 — see STATUS.md for current state)
+1. Name each hub in the REV Hardware Client (`34672-C-RC` / `34672-T-RC`) and match device config
+   names to the hardware map (§10, WORKFLOW.md §11).
 2. Get `Drivetrain` driving with Panels open (field view + per-wheel telemetry).
 3. Prove the loop works end to end: **Sloth hot-reload**, a **snapshot** writing on stop, and the
    **SystemsCheck** passing — all before any game-specific code.
 
 ## The rule that keeps this safe
 Nothing goes on the competition robot unless Kieran or Elijah can explain what it does (CLAUDE.md §1).
+

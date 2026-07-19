@@ -19,6 +19,18 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-19 (continued, docs)
+- **Documented the two-robot workflow where people actually look for it.** New `WORKFLOW.md §11`
+  "Two robots: identity & tuning" — the operational how-to a coach/student needs: name each hub in
+  the REV Hardware Client (`34672-C-RC` / `34672-T-RC`) and reboot, read the `ROBOT: …` banner,
+  and the tuning-ownership rule (promote only from the comp robot; test tuning is scratch, never
+  committed). Added a pointer from §5. (`WORKFLOW.md`)
+- **Refreshed `README.md` to match the current tree.** It was stale — still listed the removed intake
+  files (`IntakeLogic`, `Intake`, `IntakeLogicTest`) and an old Persistence description. Now reflects
+  the real four-layer tree (commands/diagnostics/pedroPathing/util+profile), the robot-aware
+  Persistence, `RobotIdentity`, the actual test files, and a short "Two robots, one codebase"
+  section. (`README.md`)
+
 ## 2026-07-19 (continued)
 - **Charter: we run ONE Limelight, not two.** Updated the hardware map and the vision note — model
   iteration and competition use share the single camera, so model deploys stay deliberate (validate

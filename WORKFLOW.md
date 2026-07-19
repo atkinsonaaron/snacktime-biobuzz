@@ -98,7 +98,9 @@ For every change:
 Use the cheapest tier that does the job (`CLAUDE.md` §6):
 
 - **Tuning a number** (powers, gains, timeouts) → change it live on the **dashboard**. No push.
-  Then promote the good value back into `TuningConfig` and commit, or it's lost on restart.
+  Then promote the good value back into the subsystem's source and commit, or it's lost on restart.
+  **Two robots:** promote only from the *competition* robot — the test bot's tuning is scratch and
+  never committed (see §11).
 - **Changing logic/behavior** (teamcode) → **Sloth hot reload**, sub-second.
 - **Changing a dependency / library** → **STOP. Warn and confirm** with a human, then full install
   (`CLAUDE.md` §6, NON-NEGOTIABLE).
@@ -165,6 +167,46 @@ Each season is a fresh build (`CLAUDE.md` philosophy). Order:
 3. **Build mechanisms** — describe each, generate, review, test; scale the patterns in the flagship
    subsystem to each new mechanism.
 4. **Harden** — reliability, fallbacks, per-subsystem health, and competition readiness.
+
+---
+
+## 11. Two robots: identity & tuning
+
+We run a **Competition robot** and a **Test bot** off the *same commit* — never a fork (the rules
+are `CLAUDE.md` §6/§7/§10; this is how you actually work with them). The code figures out which
+robot it's on at runtime from the **hub network name**, and loads that robot's own tuning.
+
+### One-time setup per hub (do this before anything else works right)
+1. In the **REV Hardware Client**, name each Control Hub:
+   - Competition robot → **`34672-C-RC`**
+   - Test bot → **`34672-T-RC`**
+   The single-letter suffix (`-C` / `-T`) is required — the FTC name validator rejects words like
+   `-COMP`, and it's also the competition-inspection convention.
+2. **Reboot** the hub so the new name takes effect.
+3. That's it — a student can't change identity from an OpMode; it takes the Hardware Client + a
+   reboot, on purpose.
+
+### How to tell which robot you're on
+Every OpMode shows a loud banner, first line, on the Driver Hub **and** Panels:
+- `ROBOT: COMPETITION` / `ROBOT: TEST BOT` — you're good.
+- `ROBOT: *** UNKNOWN ***` — the hub name matches neither pattern. The robot **loads no tuning**
+  and runs on the in-code (competition) defaults. Fix the hub name (step 1 above). Systems Check
+  also warns on this.
+
+### Tuning ownership — the rule that protects the competition robot
+- **The in-code defaults are the competition robot's canonical tuning**, backed up in git. When you
+  dial a value in on the **competition robot**, promote it back into source and commit (§8).
+- **Tune the test bot freely.** Its live values save to `TESTBOT_SCRATCH_do_not_promote.json` on the
+  test bot's hub — a deliberately loud name. It's **gitignored and must never be committed.** This is
+  what lets students experiment on the test bot without any risk to the competition tuning.
+- **Never promote test-bot values to source.** Promotion is a competition-robot action only.
+- Each robot keeps its own per-robot files (`comp_tuning.json`, `snacktime_snapshot_COMPETITION.json`,
+  etc.), so pulling both robots' files to one laptop never mixes them up.
+
+### When you pull files off a hub
+Snapshots and tuning files are per-robot and self-describing (`..._COMPETITION.json` /
+`..._TESTBOT.json`). The `robot` and `networkName` fields inside each snapshot tell you exactly which
+robot and which hub produced it.
 
 ---
 
