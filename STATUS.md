@@ -1,7 +1,8 @@
 # STATUS.md — where this project actually is
 
-**Last updated:** 2026-07-18 — Pinpoint wired in and localization proven live on-robot; tunables
-reorganized into per-subsystem files; hub log auto-cleanup added.
+**Last updated:** 2026-07-18 — **Phase 0 complete, 6-of-6.** SystemsCheck, LocalizationTest, and
+the Pedro `Line` path test all run on-robot; snapshot pulled and `gitHash` verified real. TeleOp
+forward/backward direction bug found and fixed the same session.
 
 **Read `CLAUDE.md` first** — that's the charter (rules + architecture) and it governs everything.
 This file is only the *current state*: what's verified, what's left, and what to do next. Keep it
@@ -15,7 +16,7 @@ of checking. Verify, don't assume.
 
 ## Where we are
 
-**Phase 0 (§13 of CLAUDE.md) acceptance status:**
+**Phase 0 (§13 of CLAUDE.md) acceptance status — ALL DONE (2026-07-18):**
 - ✅ Base stack builds and deploys (SETUP.md Phases 1–5)
 - ✅ **Sloth hot-reload proven on-robot** — sub-second load confirmed 2026-07-17
 - ✅ `GIT_HASH` + `BUILD_TIME` in TeamCode `BuildConfig` (verified in generated source)
@@ -23,15 +24,24 @@ of checking. Verify, don't assume.
 - ✅ **Pinpoint wired in; localization proven live on-robot** — pod offsets measured via
   `OffsetsTuner` (`forwardPodY=6.735`, `strafePodX=0.287`), robot mass set, Panels field view shows
   live pose + heading + history trail (`LocalizationTest`)
-- ⏳ **Snapshot writes proof on-robot** (still pending) — pull `snacktime_snapshot.json` off the hub
-  or grep `SNAPSHOT:` in the RC log, confirm `gitHash` is a real commit hash, not `"unknown"`
-- ⏳ **Pedro follows a path proof on-robot** (still pending) — localization tracks pose correctly,
-  but no path-follow run is confirmed yet. The `Tuning` menu → `Tests` folder has `Line` /
-  `Triangle` / `Circle` OpModes ready to run against the now-real pod offsets.
+- ✅ **Snapshot writes proof** — pulled `snacktime_snapshot.json` off the hub via
+  `adb pull /sdcard/FIRST/settings/snacktime_snapshot.json`; `gitHash: "d8eff89"` matched the exact
+  commit running on the hub. `avgLoopHz: 151.6` / `avgLoopMs: 6.6` — well inside the §0 target.
+  One open item from this pull: `maxLoopMs: 1005` (a single ~1s spike) — cause not yet identified;
+  no hot-reload or reboot happened mid-run as far as we know, so this needs a closer look next
+  session (Profiler or Android Profiler) rather than being written off as a known one-time cost.
+- ✅ **SystemsCheck passed on-robot** — all 4 drive motors + sensors verified
+- ✅ **Pedro follows a path — proven on-robot.** Ran `Tuning` → `Tests` → `Line`; the Follower
+  executed the commanded 40" path (not a version-mismatch crash — the Pedro 2.1.2 ↔ SolversLib
+  0.3.4 pairing works at runtime, which was the actual thing this proof needed to establish). Path
+  tracking **drifted** — expected pre-PIDF-tuning behavior, not a Phase 0 blocker. PIDF tuning
+  (`Tuning` → `Manual` folder: Translational/Heading/Drive/Centripetal Tuners) is real follow-up
+  work, tracked separately below, not part of Phase 0 acceptance.
 
 **Ready-to-use capabilities already in teamcode** (all Tier 2, hot-reloadable):
-- **TeleOp**: field-centric mecanum drive, deadzone (now in `JoystickCurve`), LEFT_BUMPER slow
-  mode, loop-time readout
+- **TeleOp**: field-centric mecanum drive (forward/back sign verified correct on-robot 2026-07-18,
+  strafe confirmed correct, turn not yet stick-tested), deadzone (now in `JoystickCurve`),
+  LEFT_BUMPER slow mode, loop-time readout
 - **Autonomous**: Driver-Hub pre-match menu (alliance / start pose / field / delay), command-tree
   scheduling, command lifecycle logging (gated behind `verboseTelemetry`), snapshot persistence
 - **Path following**: `FollowPathCommand` wraps Pedro so autos compose as command trees; Pedro
@@ -81,22 +91,37 @@ Verified via `./gradlew :TeamCode:dependencies` and by reading `TeamCode/build.g
 
 ## Next action
 
-Two proofs remain before Phase 0 is fully verified. Both need the robot in front of you.
+**Phase 0 is done** — the whole generation-first loop (AI writes code → hot reload → live tune →
+observe on real telemetry → persist a record) is proven end to end on real hardware. What's next is
+real tuning/dev work, not proof-of-concept work:
 
-1. **On-robot: prove snapshot writes** — run any OpMode, pull `snacktime_snapshot.json` off the
-   hub (ADB or the hub's Manage page), confirm the `gitHash` field is a real commit hash like
-   `84cca60`, not `"unknown"`.
-2. **On-robot: prove Pedro follows a path** — Pinpoint is wired in and pod offsets are measured
-   (`forwardPodY=6.735`, `strafePodX=0.287`), and `LocalizationTest` confirms pose tracking works.
-   What's left is running an actual path: open `Tuning` (Pedro Pathing group) → `Tests` folder →
-   `Line` (or `Triangle`/`Circle`) and confirm the Follower drives the commanded path, not just
-   that pose updates. A version mismatch (Pedro 2.1.2 ↔ SolversLib 0.3.4) surfaces at **runtime,
-   not build** — "it compiled" proves nothing here.
+1. **PIDF-tune Pedro path following** — the `Line` test drifted on its first run (expected,
+   untuned). Work through `Tuning` → `Manual`: Translational Tuner, Heading Tuner, Drive Tuner,
+   Centripetal Tuner, one at a time (§6 "one change at a time"), then re-run `Line`/`Triangle`/
+   `Circle` to confirm tracking tightens up. Promote good values back into `Constants.java`
+   (`followerConstants`) once dialed in.
+2. **Investigate the `maxLoopMs: 1005` spike** from the pulled snapshot — average loop time is
+   excellent (151.6 Hz) so this isn't a systemic problem, but a full-second worst-case cycle is
+   worth explaining, not ignoring (§0 "measure it, always"). Reproduce with `Profiler` enabled
+   (`TuningConfig.profilerEnabled`) or the Android Profiler to find which block spiked.
+3. **Add the Pinpoint's config name to `CLAUDE.md §10`** hardware map — confirmed as `"pinpoint"`
+   in the snapshot's hardware list, but the charter's hardware table doesn't have it yet.
 
 **Pre-season opportunity:** order Pollen from AndyMark and build the goBILDA StarterBot Base so
-Phase 0 can prove itself against real game pieces before the September 12, 2026 kickoff.
+future work can happen against real game pieces before the September 12, 2026 kickoff.
 
 ---
+
+## Recent significant additions (2026-07-18, fourth session — on-robot testing)
+
+- **TeleOp forward/backward was inverted vs. the controller; fixed.** Strafe matched correctly.
+  Since Pedro's `Line` path test drove the correct physical direction autonomously, the drivetrain
+  wiring/motor directions were confirmed fine — this was a joystick-mapping bug only, isolated to
+  `TeleOpExample`. Fixed by removing the sign flip on the forward term (now `driver.getLeftY()`,
+  not `-driver.getLeftY()`); strafe and turn untouched. Turn direction not yet stick-tested on the
+  robot. Hot-reloadable (Tier 2), no full install needed. (`opmodes/TeleOpExample.java`)
+- **Pinpoint's RC config name (`pinpoint`) and measured pod offsets added to `CLAUDE.md §10`** —
+  the hardware table previously didn't record the config name at all. (`CLAUDE.md`)
 
 ## Recent significant additions (2026-07-18, third session)
 
@@ -190,6 +215,11 @@ Phase 0 can prove itself against real game pieces before the September 12, 2026 
   flags stay in `TuningConfig`. Live-editable from Panels; once a value is dialed in, promote it
   back to source (§6 "Promote good values back to source"). New `@Configurable` classes must be
   added to `Persistence.TUNING_CLASSES` to be captured in session persistence.
+- **`snacktime_snapshot.json` stays a single overwritten file — decided 2026-07-18.** No
+  date-stamped per-session snapshot files. Per-session history already lives in the RC's persistent
+  logs (`SNAPSHOT:` lines, one per OpMode run, 14-day retention via `LogCleanup`); this file is
+  just the fast-path "latest state" pull, same role as `current_tuning.json`. Don't re-raise this
+  as an open question — it was considered and closed.
 
 ---
 

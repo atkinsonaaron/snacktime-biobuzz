@@ -346,7 +346,7 @@ Persistent control/sensor suite (carries across seasons):
 | Controller | REV Control Hub | — | MANUAL bulk caching |
 | Actuator hub | REV Servo Hub | — | needs RC + DS apps on 10.0+ to configure as a Servo Hub (else shows as generic Expansion Hub); firmware/address via REV Hardware Client |
 | Vision | Limelight 3A ×2 | USB 3.0 | detection on-device; used for relative **aiming, not pose** (§3) |
-| Odometry | goBILDA Pinpoint (V2) | I2C | **single source of pose (no fusion)**; read once/loop; mind wire routing/ferrite |
+| Odometry | goBILDA Pinpoint (V2), config name `pinpoint` | I2C | **single source of pose (no fusion)**; read once/loop; mind wire routing/ferrite; pod offsets measured on-robot 2026-07-18 (`forwardPodY=6.735`, `strafePodX=0.287` in `pedroPathing/Constants.java`) |
 | Distance | Brushland Labs Color Rangefinder | Analog | analog distance mode; cheap to read (rides bulk read) |
 | Drivetrain FL | `LF_Motor` (port 0) | — | goBILDA Yellow Jacket; per-wheel health telemetry required |
 | Drivetrain LR | `LR_Motor` (port 1) | — | goBILDA Yellow Jacket |

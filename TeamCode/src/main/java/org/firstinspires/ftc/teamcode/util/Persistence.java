@@ -107,9 +107,15 @@ public final class Persistence {
 
         /** Populate loop stats from the OpMode's LoopTimer. Call once at stop, never in the loop. */
         public void captureLoop(LoopTimer timer) {
-            avgLoopMs = timer.getAverageMs();
-            avgLoopHz = avgLoopMs > 0.0 ? 1000.0 / avgLoopMs : 0.0;
-            maxLoopMs = timer.getMaxLoopMs();
+            double rawAvgMs = timer.getAverageMs();
+            double rawAvgHz = rawAvgMs > 0.0 ? 1000.0 / rawAvgMs : 0.0;
+            avgLoopMs = roundTo1Decimal(rawAvgMs);
+            avgLoopHz = roundTo1Decimal(rawAvgHz);
+            maxLoopMs = roundTo1Decimal(timer.getMaxLoopMs());
+        }
+
+        private static double roundTo1Decimal(double value) {
+            return Math.round(value * 10.0) / 10.0;
         }
     }
 

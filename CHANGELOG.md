@@ -19,6 +19,41 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-18 (continued, thirteenth pass)
+- **Snapshot loop-time fields rounded to 1 decimal place.** `avgLoopHz`, `avgLoopMs`, and
+  `maxLoopMs` in `snacktime_snapshot.json` were full double precision (e.g. `151.62107592675073`)
+  — noise past the first decimal doesn't help anyone reading the file. Rounded in
+  `Snapshot.captureLoop()`, which only runs once at OpMode `stop()` (not the hot loop), so this has
+  no effect on loop time. (`util/Persistence.java`)
+
+## 2026-07-18 (continued, twelfth pass)
+- **TeleOp forward/backward direction fixed.** On-robot testing found the drivetrain drove forward
+  and backward opposite of the controller, while strafe matched correctly. Since Pedro's `Line`
+  path test drove the correct physical direction autonomously, the motor wiring/directions in
+  `pedroPathing/Constants.java` were confirmed fine — this was a TeleOp joystick-mapping bug only.
+  Fixed by dropping the sign flip on the forward term (`driver.getLeftY()` instead of
+  `-driver.getLeftY()`); strafe and turn left unchanged. Hot-reloadable (Tier 2).
+  (`opmodes/TeleOpExample.java`)
+- **Confirmed the Pinpoint's RC config name (`pinpoint`) and pod offsets in `CLAUDE.md §10`.**
+  Hardware table previously didn't record the config name at all. (`CLAUDE.md`)
+
+## 2026-07-18 (continued, eleventh pass) — Phase 0 complete, 6-of-6
+- **All Phase 0 (§13) on-robot proofs closed out.** `SystemsCheck` passed (all 4 drive motors +
+  sensors). `LocalizationTest` confirmed correct live pose tracking. `Tuning` → `Tests` → `Line`
+  ran the Follower through the commanded 40" path — it drifted (expected pre-PIDF-tuning behavior,
+  not a proof failure); the proof itself is that Pedro 2.1.2 and SolversLib 0.3.4 work together at
+  runtime with no version-mismatch crash, which is confirmed. Pulled `snacktime_snapshot.json` via
+  `adb pull /sdcard/FIRST/settings/snacktime_snapshot.json` and verified `gitHash: "d8eff89"`
+  matched the exact commit running on the hub — snapshot-writes proof closed.
+  One open item surfaced by the pulled snapshot: `maxLoopMs: 1005` (a single ~1s worst-case cycle
+  against an otherwise healthy `avgLoopHz: 151.6`) — cause not yet identified, tracked as follow-up
+  work in `STATUS.md`, not written off. (`STATUS.md`)
+- **Decided: `snacktime_snapshot.json` stays a single file, overwritten on every `stop()`.**
+  Considered date-stamping it for per-session history, but that already exists — every snapshot is
+  also written to the RC's persistent log under a `SNAPSHOT:` line, one per OpMode run, with
+  14-day retention via `LogCleanup`. Adding dated snapshot files would duplicate that history and
+  need its own cleanup sweep for no real benefit. Closed, not left open. (decision only, no code)
+
 ## 2026-07-18 (continued, tenth pass)
 - **Removed a stray extracted Pedro sources jar from the repo root.** `META-INF/` and
   `com/pedropathing/...` were loose source files (bare manifest + `ftc` package sources) left over

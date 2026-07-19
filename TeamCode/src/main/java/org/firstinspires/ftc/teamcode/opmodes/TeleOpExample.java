@@ -61,10 +61,11 @@ public class TeleOpExample extends CommandOpMode {
                 : Drivetrain.driveSpeedCap;
 
         // Field-centric: Pedro rotates strafe/forward by the Pinpoint heading before applying power.
-        // Sign convention from PedroTeleOpSample: (-leftY, -leftX, -rightX).
-        // TODO: if a direction is backwards on the robot, flip that sign.
+        // Sign convention verified on-robot 2026-07-18: forward was inverted vs. PedroTeleOpSample's
+        // -leftY (strafe/turn matched as-is). Pedro's Line test drove the correct physical direction
+        // autonomously, so this is a TeleOp-mapping-only flip, not a motor-wiring issue.
         double dz = JoystickCurve.deadzone;
-        double forward = applyDeadzone(-driver.getLeftY(), dz);
+        double forward = applyDeadzone(driver.getLeftY(), dz);
         double strafe  = applyDeadzone(-driver.getLeftX(), dz);
         double turn    = applyDeadzone(-driver.getRightX(), dz);
         follower.setTeleOpDrive(forward * cap, strafe * cap, turn * cap, false);
