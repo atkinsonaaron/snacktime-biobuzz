@@ -46,14 +46,20 @@ public class TeleOpExample extends CommandOpMode {
         follower.startTeleopDrive();
 
         Persistence.writeSnapshot(new Persistence.Snapshot(), hardwareMap); // safe: init, not the loop (section 7)
-        loopTimer.reset();
     }
 
     @Override
     public void run() {
         // RULE 1, NON-NEGOTIABLE: clear the bulk cache FIRST, every loop, always (section 4).
         bulkReads.clear();
-        if (startBatteryVolts == 0.0) startBatteryVolts = Persistence.readBatteryVolts(hardwareMap);
+        if (startBatteryVolts == 0.0) {
+            startBatteryVolts = Persistence.readBatteryVolts(hardwareMap);
+            // Deferred here (not init) because the voltage sensor reads 0.0 too early during init.
+            // It's an uncached hardware round-trip (voltage reads aren't covered by BulkReads), so
+            // reset the timer right after paying that one-time cost — otherwise it wrongly counts
+            // toward every session's maxLoopMs, matching LoopTimer.reset()'s own documented intent.
+            loopTimer.reset();
+        }
 
         // Read -> process -> write (section 4, rule 2).
         double cap = driver.getButton(GamepadKeys.Button.LEFT_BUMPER)

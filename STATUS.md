@@ -2,7 +2,8 @@
 
 **Last updated:** 2026-07-18 — **Phase 0 complete, 6-of-6.** SystemsCheck, LocalizationTest, and
 the Pedro `Line` path test all run on-robot; snapshot pulled and `gitHash` verified real. TeleOp
-forward/backward direction bug found and fixed the same session.
+forward/backward direction bug found and fixed, and the `maxLoopMs` spike (1005→27ms) root-caused
+and fixed, both the same session.
 
 **Read `CLAUDE.md` first** — that's the charter (rules + architecture) and it governs everything.
 This file is only the *current state*: what's verified, what's left, and what to do next. Keep it
@@ -25,11 +26,16 @@ of checking. Verify, don't assume.
   `OffsetsTuner` (`forwardPodY=6.735`, `strafePodX=0.287`), robot mass set, Panels field view shows
   live pose + heading + history trail (`LocalizationTest`)
 - ✅ **Snapshot writes proof** — pulled `snacktime_snapshot.json` off the hub via
-  `adb pull /sdcard/FIRST/settings/snacktime_snapshot.json`; `gitHash: "d8eff89"` matched the exact
-  commit running on the hub. `avgLoopHz: 151.6` / `avgLoopMs: 6.6` — well inside the §0 target.
-  One open item from this pull: `maxLoopMs: 1005` (a single ~1s spike) — cause not yet identified;
-  no hot-reload or reboot happened mid-run as far as we know, so this needs a closer look next
-  session (Profiler or Android Profiler) rather than being written off as a known one-time cost.
+  `adb pull /sdcard/FIRST/settings/snacktime_snapshot.json`; `gitHash` matched the exact commit
+  running on the hub across three pulls (`d8eff89`, `3601d1e` full install, `3601d1e` hot-reload).
+  `avgLoopHz` ~146–155 / `avgLoopMs` ~6.5–6.8 throughout — well inside the §0 target.
+  **`maxLoopMs` spike found and fixed** — was `1005ms` (46–150x average), root-caused to
+  `Persistence.readBatteryVolts()` being deferred to the first loop iteration (voltage sensor reads
+  `0.0` too early in init) while `loopTimer.reset()` fired before that one-time, uncached hardware
+  read — so it was silently inflating every session's worst-case reading. Moved `reset()` to fire
+  right after that one-time read instead, in both `TeleOpExample` and `AutonomousExample`. Confirmed
+  fixed on-robot: `maxLoopMs` dropped `1005 → 300.6 → 27.0ms` across three pulls, ending at a normal,
+  explainable first-loop cost (~4x average, not 46–150x). Closed.
 - ✅ **SystemsCheck passed on-robot** — all 4 drive motors + sensors verified
 - ✅ **Pedro follows a path — proven on-robot.** Ran `Tuning` → `Tests` → `Line`; the Follower
   executed the commanded 40" path (not a version-mismatch crash — the Pedro 2.1.2 ↔ SolversLib
@@ -100,12 +106,10 @@ real tuning/dev work, not proof-of-concept work:
    Centripetal Tuner, one at a time (§6 "one change at a time"), then re-run `Line`/`Triangle`/
    `Circle` to confirm tracking tightens up. Promote good values back into `Constants.java`
    (`followerConstants`) once dialed in.
-2. **Investigate the `maxLoopMs: 1005` spike** from the pulled snapshot — average loop time is
-   excellent (151.6 Hz) so this isn't a systemic problem, but a full-second worst-case cycle is
-   worth explaining, not ignoring (§0 "measure it, always"). Reproduce with `Profiler` enabled
-   (`TuningConfig.profilerEnabled`) or the Android Profiler to find which block spiked.
-3. **Add the Pinpoint's config name to `CLAUDE.md §10`** hardware map — confirmed as `"pinpoint"`
-   in the snapshot's hardware list, but the charter's hardware table doesn't have it yet.
+
+~~2. Investigate the `maxLoopMs` spike~~ — **done, see Phase 0 acceptance above.** Root cause was
+`loopTimer.reset()` firing before the deferred, uncached battery-volts read instead of after it.
+Fixed in `TeleOpExample.java` and `AutonomousExample.java`; confirmed on-robot (`1005 → 300.6 → 27.0ms`).
 
 **Pre-season opportunity:** order Pollen from AndyMark and build the goBILDA StarterBot Base so
 future work can happen against real game pieces before the September 12, 2026 kickoff.

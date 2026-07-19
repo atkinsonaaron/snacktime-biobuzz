@@ -19,6 +19,18 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-18 (continued, fourteenth pass)
+- **Root-caused and fixed the `maxLoopMs` outlier** (`1005ms` worst-case cycle against a healthy
+  ~6.6ms average, seen in the pulled snapshot). Cause: `Persistence.readBatteryVolts()` is
+  deliberately deferred to the first loop iteration (the voltage sensor reads `0.0` too early
+  during init) and isn't covered by `BulkReads`' cache — it's a real, synchronous hub round-trip.
+  `loopTimer.reset()` was firing at the end of `initialize()`, before that one-time cost landed in
+  the loop, so it silently counted toward every session's worst-case reading. Moved `reset()` to
+  fire right after that one-time read instead, in both `TeleOpExample` and `AutonomousExample`.
+  Confirmed fixed on-robot: `maxLoopMs` dropped `1005 → 300.6 → 27.0ms` across three snapshot pulls,
+  landing at a normal, explainable first-loop cost instead of an unexplained 46–150x spike.
+  (`opmodes/TeleOpExample.java`, `opmodes/AutonomousExample.java`)
+
 ## 2026-07-18 (continued, thirteenth pass)
 - **Snapshot loop-time fields rounded to 1 decimal place.** `avgLoopHz`, `avgLoopMs`, and
   `maxLoopMs` in `snacktime_snapshot.json` were full double precision (e.g. `151.62107592675073`)

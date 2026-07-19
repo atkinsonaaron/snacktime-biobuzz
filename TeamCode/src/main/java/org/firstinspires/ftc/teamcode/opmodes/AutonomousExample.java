@@ -102,7 +102,6 @@ public class AutonomousExample extends CommandOpMode {
             routine = new SequentialCommandGroup(new WaitCommand(selectedDelaySeconds * 1000L), routine);
         }
         schedule(routine);
-        loopTimer.reset();
     }
 
     private Command routine() {
@@ -116,7 +115,14 @@ public class AutonomousExample extends CommandOpMode {
     public void run() {
         // RULE 1, NON-NEGOTIABLE: clear the bulk cache FIRST, every loop, always (§4).
         bulkReads.clear();
-        if (startBatteryVolts == 0.0) startBatteryVolts = Persistence.readBatteryVolts(hardwareMap);
+        if (startBatteryVolts == 0.0) {
+            startBatteryVolts = Persistence.readBatteryVolts(hardwareMap);
+            // Deferred here (not init) because the voltage sensor reads 0.0 too early during init.
+            // It's an uncached hardware round-trip (voltage reads aren't covered by BulkReads), so
+            // reset the timer right after paying that one-time cost — otherwise it wrongly counts
+            // toward every session's maxLoopMs, matching LoopTimer.reset()'s own documented intent.
+            loopTimer.reset();
+        }
 
         super.run(); // command scheduler + subsystem periodics (incl. DiagnosticsCenter)
 
