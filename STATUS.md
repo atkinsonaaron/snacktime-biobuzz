@@ -172,11 +172,19 @@ Decide the exact approach once Step 4 exists and we know what the Limelight pipe
 **SystemsCheck build-out (added 2026-07-20 — not slotted into the ordered 1–5 above; new scope).**
 Flesh out the pre-match diagnostic (`opmodes/SystemsCheck.java`, §5 "deterministic init, fail loud")
 beyond today's motor-presence + battery checks. Planned checks, recorded as TODOs in the file:
-- **Status-LED indicator** driven off the pass/warn/fail state (RED fail / YELLOW warn / GREEN clear)
-  so "is the robot happy?" is glanceable before START. Primary target: the **Control Hub's onboard
-  LED** (it's a `LynxModule` implementing `Blinker` — `hub.setConstant(Color.RED)`, reachable via the
-  same `hardwareMap.getAll(LynxModule.class)` handle `BulkReads` uses; zero extra hardware, bench-
-  visible only). Optional add-on: a **REV Blinkin + LED strip** (runs as a servo — see the
+- **Status indicator — the systems-check status + warnings live on the GAMEPAD LEDs, not the Control
+  Hub** (pre-play warnings belong in the drivers' hands). Team runs Sony DualShock 4 / DualSense
+  (controllable RGB light bar; F310s couldn't do this). **gamepad1 steady BLUE** (driver) and
+  **gamepad2 steady RED** (operator) when all checks pass — which also solves "which controller is
+  which"; a pad **flashes YELLOW** when a check tied to it fails/warns (e.g. that pad's stick isn't
+  within the 0.05 zero point — check (b)). API: `gamepad.setLedColor(r,g,b,LED_DURATION_CONTINUOUS)`
+  steady, `gamepad.runLedEffect(repeating LedEffect.Builder)` flashing.
+- **Robot-mounted LEDs — future, separate purpose** (not the gamepad pre-play status): planned add-on
+  light(s) for various OTHER checks (subsystem health, game-piece count, alliance/mode, etc.). The
+  Control Hub's onboard LED (`hub.setConstant`/`setPattern`) can fold into this robot-side scheme, as
+  can a REV Blinkin + LED strip (servo-driven) for an across-the-field indicator. Define which checks
+  map to which colors when the LED hardware is chosen. LOOP COST: gamepad effects and any hub/strip
+  pattern self-animate (DS-side / firmware) — set on state **change** only, flashing is free per loop. Optional add-on: a **REV Blinkin + LED strip** (runs as a servo — see the
   `SampleRevBlinkinLedDriver` sample) so the drive team can see it across the field; wrap both behind
   a `util/StatusLED` helper that no-ops gracefully if the Blinkin isn't wired. LOOP-COST NOTE (§0/§4):
   set the LED only on state **change**, never per loop. The Driver Hub's open USB port canNOT drive an

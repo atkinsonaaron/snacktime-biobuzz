@@ -67,22 +67,40 @@ public class SystemsCheck extends LinearOpMode {
         // ─────────────────────────────────────────────────────────────────────────────────────
         // TODO: SystemsCheck build-out — planned checks, not yet implemented.
         //
-        //  (a) Status-LED indicator (see CLAUDE.md §5 "deterministic init, fail loud").
-        //      Drive an indicator from the pass/warn/fail state so the answer is glanceable at
-        //      the bench BEFORE START, not buried in telemetry:
-        //          RED    = a check FAILED (missing motor, low battery, identity UNKNOWN)
-        //          YELLOW = passed-with-warnings
-        //          GREEN  = all clear, cleared to play
-        //      Primary target: the Control Hub's onboard LED — it's a LynxModule that implements
-        //      Blinker, reachable via hardwareMap.getAll(LynxModule.class) (same handle BulkReads
-        //      grabs): hub.setConstant(Color.RED). Zero extra hardware; visible at the bench only.
-        //      Optional: also drive a REV Blinkin + LED strip (runs as a servo — see the
-        //      SampleRevBlinkinLedDriver in FtcRobotController samples) so the DRIVE TEAM can see
-        //      it across the field. Wrap both behind a util/StatusLED helper that degrades
-        //      gracefully if the Blinkin isn't wired. LOOP-COST NOTE (§0/§4): set the LED only on
-        //      state CHANGE — it's a bus write — never every loop.
-        //      NOTE: the Driver Hub's open USB port canNOT drive an LED (no SDK path); all
-        //      indicator logic lives on the Control Hub side.
+        //  (a) Status indicator, driven from the pass/warn/fail state (CLAUDE.md §5 "deterministic
+        //      init, fail loud").
+        //
+        //      THE SYSTEMS-CHECK STATUS + WARNINGS LIVE ON THE GAMEPAD LEDs (driver-facing, in-hand) —
+        //      NOT the Control Hub. The pre-play warnings belong in the drivers' hands, not on a light
+        //      on the robot they aren't looking at. Team runs Sony DualShock 4 / DualSense, which have
+        //      a controllable RGB light bar (an F310 would NOT — no addressable LED). Scheme:
+        //          gamepad1 steady BLUE = driver pad, all checks good
+        //          gamepad2 steady RED  = operator pad, all checks good
+        //              (blue vs red ALSO solves "which controller is which" — a bonus, not just status)
+        //          FLASH YELLOW on a pad when a check tied to it FAILS/WARNS — e.g. that pad's stick is
+        //          not within the zero point (|axis| >= JoystickCurve.deadzone, 0.05 — this is check (b)).
+        //      API (r,g,b in 0..1):
+        //          steady:   gamepad1.setLedColor(0,0,1, Gamepad.LED_DURATION_CONTINUOUS); // blue
+        //                    gamepad2.setLedColor(1,0,0, Gamepad.LED_DURATION_CONTINUOUS); // red
+        //          flashing: gamepad1.runLedEffect(new Gamepad.LedEffect.Builder()
+        //                        .addStep(1,1,0,250)   // yellow 250ms
+        //                        .addStep(0,0,0,250)   // off    250ms
+        //                        .setRepeating(true).build());
+        //
+        //      ROBOT-MOUNTED LEDs — FUTURE, SEPARATE PURPOSE (not the gamepad pre-play status). Planned
+        //      add-on light(s) for VARIOUS OTHER checks — e.g. subsystem health, game-piece count,
+        //      alliance/mode. The Control Hub's own onboard LED can be folded into this robot-side
+        //      scheme (it's a LynxModule implementing Blinker: hub.setConstant / hub.setPattern, via
+        //      hardwareMap.getAll(LynxModule.class) — same handle BulkReads grabs), as can a REV
+        //      Blinkin + LED strip (runs as a servo — see the SampleRevBlinkinLedDriver sample) for an
+        //      across-the-field indicator. Define exactly which checks map to which colors when the
+        //      robot LED hardware is chosen.
+        //
+        //      Wrap it all behind a util/StatusLED helper. LOOP-COST NOTE (§0/§4): set every LED /
+        //      pattern / effect only on state CHANGE — the gamepad effect and any hub/strip pattern
+        //      animate themselves (DS-side / firmware), so flashing costs nothing per loop; re-sending
+        //      each loop wastes bandwidth AND restarts the animation at step 0 so it never blinks.
+        //      NOTE: the Driver Hub's open USB port canNOT drive an LED (no SDK path).
         //
         //  (b) Stick-at-rest / drift check. Before START, confirm every gamepad axis reads within
         //      the deadzone — i.e. |axis| < JoystickCurve.deadzone (the "zero point", currently

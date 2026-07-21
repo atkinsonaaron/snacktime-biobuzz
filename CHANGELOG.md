@@ -19,7 +19,17 @@ one-command rollback target is easy to find later.
 
 ---
 
-## 2026-07-20
+- **Settled the SystemsCheck status indicator: pre-play status + warnings on the GAMEPAD LEDs, NOT
+  the Control Hub.** Warnings belong in the drivers' hands. Drivers run Sony DualShock 4 / DualSense
+  (controllable RGB light bar): gamepad1 steady BLUE + gamepad2 steady RED when all checks pass
+  (doubles as which-controller-is-which), and a pad flashes YELLOW when a check tied to it fails/warns
+  (e.g. its stick outside the 0.05 zero point — check (b)). API: `setLedColor(...)` steady,
+  `runLedEffect(repeating Builder)` flashing; both self-animate so flashing is free per loop (set on
+  state change only). The Control Hub LED and future ROBOT-MOUNTED LEDs are a *separate* channel for
+  various OTHER checks (subsystem health, game-piece count, alliance/mode) — colors TBD when that LED
+  hardware is chosen; a REV Blinkin + strip is an option there for across-the-field visibility.
+  (Supersedes today's earlier flashing-hub-LED and hub-as-secondary-status notes.) TODO in
+  `SystemsCheck.java` + STATUS.md updated. (`opmodes/SystemsCheck.java`, `STATUS.md`)
 - **Fixed a stale contradiction in `CLAUDE.md` §6 "Tuning discipline".** The "Promote good values
   back to source / commit it into the code as the new default" bullet was left over from the
   first-cut tuning model and directly contradicted the (NON-NEGOTIABLE) two-robot model right below
