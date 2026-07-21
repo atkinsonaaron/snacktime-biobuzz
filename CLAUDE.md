@@ -256,9 +256,19 @@ destabilize the robot. Therefore:
 ### Tuning discipline
 - **One change at a time.** Change a single configurable, observe, record the result, then move
   on. Never chase two variables at once.
-- **Promote good values back to source.** Live-tuned configurables are runtime-only. Once a value
-  is dialed in, commit it into the code as the new default — the snapshot in §7 makes this a
-  copy-paste, not a transcription.
+- **Make dialed-in values durable — but the right way per category** (see "Two robots, one
+  codebase" just below, which is NON-NEGOTIABLE and governs the specifics). Live-tuned values are
+  runtime-only until saved; a value isn't safe until it's committed. **How you commit it depends on
+  which kind it is:**
+  - **Dashboard tunables** (`@Configurable` statics — `Drivetrain`, `JoystickCurve`, `TuningConfig`):
+    save by committing the robot's own tuning file — pull the hub's `comp_tuning.json` /
+    `testbot_tuning.json` into `tuning/` (via `./save-tuning.sh`) and commit it **whole. Never
+    transcribe individual numbers back into source as new code defaults** — that was an earlier model,
+    now replaced. The in-code static defaults stay only as a last-resort fallback.
+  - **Pedro constants** (`pedroPathing/Constants.java`): these *do* live in code — record the
+    tuner's printed number into the per-robot constant set (`compFollowerConstants` /
+    `testFollowerConstants`) and commit. Here, transcription into source *is* the save path (few,
+    rare values).
 
 ### Two robots, one codebase — tuning ownership — NON-NEGOTIABLE
 We run a **Competition robot** and a **Test bot** off the *same commit* (never forked). The core

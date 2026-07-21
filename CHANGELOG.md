@@ -19,6 +19,31 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-20
+- **Fixed a stale contradiction in `CLAUDE.md` §6 "Tuning discipline".** The "Promote good values
+  back to source / commit it into the code as the new default" bullet was left over from the
+  first-cut tuning model and directly contradicted the (NON-NEGOTIABLE) two-robot model right below
+  it, which says dashboard tunables are saved by whole-file-committing the per-robot JSON and are
+  **never** transcribed into source. Rewrote the bullet to split by category: dashboard tunables →
+  commit the robot's `tuning/*.json` whole (via `./save-tuning.sh`), never transcribe; Pedro
+  constants → still recorded into the per-robot constant set in code (transcription is correct there).
+  Doc-only, no behavior change. (`CLAUDE.md`)
+- **Recorded a "Robot Hold" defensive-brace feature as a planned TODO.** When all drive inputs sit at
+  zero, the robot will capture its field pose *at that instant* and actively hold that x/y/heading, so
+  an opponent pushing us off a scoring spot is fought back into place. Sketched the design in
+  `TeleOpExample.java` (capture-once-on-entry so a push can't walk the target; reuse Pedro's
+  `holdPoint()` so it rides on the Step-2 follower tuning; don't co-run with `HeadingCorrector`; gate
+  behind a configurable). Mirrored into STATUS.md's "Next action" plan. Planning only, no behavior
+  change; depends on Step 2 Pedro tuning. (`opmodes/TeleOpExample.java`, `STATUS.md`)
+- **Recorded the SystemsCheck build-out plan as TODOs in `SystemsCheck.java`.** Captured three
+  planned pre-match checks so they don't get lost: (a) a status-LED indicator (red/yellow/green)
+  driven from the pass/fail state — primary target the Control Hub's onboard LED, optional REV
+  Blinkin strip for the drive team; (b) a stick-at-rest/drift check that fails loud if any gamepad
+  axis rests outside the joystick deadzone (`JoystickCurve.deadzone`) before START; (c) the existing
+  Limelight/Pinpoint/rangefinder sensor checks. No behavior change yet — planning only. Also mirrored
+  into STATUS.md's "Next action" plan as a tracked build-out item (new scope, not renumbered into the
+  ordered 1–5). (`opmodes/SystemsCheck.java`, `STATUS.md`)
+
 ## 2026-07-19 (continued, identity wired into Pedro tuning + Panels finding)
 - **Wired robot identity into Pedro's `Tuning.java` suite.** Previously only `TeleOpExample`/
   `AutonomousExample` showed the identity banner — the ~15 OpModes in Pedro's own tuning menu

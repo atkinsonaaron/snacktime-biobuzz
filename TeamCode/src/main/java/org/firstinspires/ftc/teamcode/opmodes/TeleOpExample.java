@@ -99,6 +99,39 @@ public class TeleOpExample extends CommandOpMode {
         follower.setTeleOpDrive(forward * cap, strafe * cap, turn * cap, false);
         follower.update();
 
+        // ─────────────────────────────────────────────────────────────────────────────────────
+        // TODO: ROBOT HOLD (idle position-hold) — a defensive brace. NOT YET IMPLEMENTED.
+        //
+        //   Behavior: the instant all three drive inputs sit at zero (forward == strafe == turn == 0
+        //   after deadzone), capture the CURRENT field pose ONCE and command the robot to actively
+        //   hold exactly that x/y/heading — so an opponent trying to push us off a scoring spot gets
+        //   fought back to where we were the moment the driver let go. Any input past the deadzone
+        //   releases the hold and hands control straight back to manual driving; the next return to
+        //   zero re-captures a fresh target.
+        //
+        //   CRUX — capture ONCE on entry, never re-capture while held: the target is "where the robot
+        //   was at the instant the sticks hit zero." If you re-read the pose every loop, a steady push
+        //   slowly walks the target and the brace is worthless. So: a small DRIVING <-> HOLDING state
+        //   (§3 allows a local state machine for a genuine mode), capturing follower.getPose() only on
+        //   the DRIVING->HOLDING transition.
+        //
+        //   MECHANISM: reuse Pedro's own point-hold rather than hand-rolling a controller — on entry
+        //   call follower.holdPoint(capturedPose) (VERIFY the exact 2.1.2 signature against
+        //   docs.seattlesolvers.com / Pedro docs — do not guess), and on release call
+        //   follower.startTeleopDrive() to resume. This reuses the follower PIDFs tuned in Step 2, so
+        //   hold quality rides on that same tuning — no second controller to tune.
+        //
+        //   INTERACTION: Pedro's holdPoint already governs heading, so it would fight HeadingCorrector
+        //   (Drivetrain.headingCorrectionEnabled). Do NOT run both at once — the hold owns heading
+        //   while active.
+        //   LOOP COST (§0/§4): follower.update() is already the per-loop follower cost; capture the
+        //   Pose only on the transition, not every loop, so no per-loop allocation is added.
+        //   TUNABLE: gate behind a @Configurable flag (e.g. Drivetrain.holdWhenIdleEnabled).
+        //   OPEN QUESTION for build time: auto-hold-on-zero (what Aaron described) vs. a hold-enable
+        //   button — auto-hold can fight a driver making fine, sub-deadzone line-up nudges. Decide on
+        //   the bench with a driver.
+        // ─────────────────────────────────────────────────────────────────────────────────────
+
         // Runs the command scheduler + every subsystem's periodic().
         super.run();
 

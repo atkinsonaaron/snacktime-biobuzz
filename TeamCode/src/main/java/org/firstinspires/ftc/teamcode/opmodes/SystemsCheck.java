@@ -64,7 +64,34 @@ public class SystemsCheck extends LinearOpMode {
             if (!ok) passed = false;
         }
 
-        // TODO: add sensor checks — Limelight reachable, Pinpoint responding, rangefinder reading.
+        // ─────────────────────────────────────────────────────────────────────────────────────
+        // TODO: SystemsCheck build-out — planned checks, not yet implemented.
+        //
+        //  (a) Status-LED indicator (see CLAUDE.md §5 "deterministic init, fail loud").
+        //      Drive an indicator from the pass/warn/fail state so the answer is glanceable at
+        //      the bench BEFORE START, not buried in telemetry:
+        //          RED    = a check FAILED (missing motor, low battery, identity UNKNOWN)
+        //          YELLOW = passed-with-warnings
+        //          GREEN  = all clear, cleared to play
+        //      Primary target: the Control Hub's onboard LED — it's a LynxModule that implements
+        //      Blinker, reachable via hardwareMap.getAll(LynxModule.class) (same handle BulkReads
+        //      grabs): hub.setConstant(Color.RED). Zero extra hardware; visible at the bench only.
+        //      Optional: also drive a REV Blinkin + LED strip (runs as a servo — see the
+        //      SampleRevBlinkinLedDriver in FtcRobotController samples) so the DRIVE TEAM can see
+        //      it across the field. Wrap both behind a util/StatusLED helper that degrades
+        //      gracefully if the Blinkin isn't wired. LOOP-COST NOTE (§0/§4): set the LED only on
+        //      state CHANGE — it's a bus write — never every loop.
+        //      NOTE: the Driver Hub's open USB port canNOT drive an LED (no SDK path); all
+        //      indicator logic lives on the Control Hub side.
+        //
+        //  (b) Stick-at-rest / drift check. Before START, confirm every gamepad axis reads within
+        //      the deadzone — i.e. |axis| < JoystickCurve.deadzone (the "zero point", currently
+        //      0.05). A stick that rests outside the deadzone will command drive the instant the
+        //      match starts. Check driver + operator left/right X/Y (and triggers) and FAIL loud
+        //      if any is drifting, naming the offending stick.
+        //
+        //  (c) Sensor checks — Limelight reachable, Pinpoint (I2C) responding, rangefinder reading.
+        // ─────────────────────────────────────────────────────────────────────────────────────
 
         // --- battery voltage is a cheap, high-value pre-match check ---
         double volts = 0.0;

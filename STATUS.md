@@ -169,8 +169,45 @@ aim/drive command that re-targets as the offset updates. Build it as a new `Comm
 layer, §3) composing `FollowPathCommand` and the Vision subsystem — not a hand-rolled state machine.
 Decide the exact approach once Step 4 exists and we know what the Limelight pipeline actually reports.
 
-**Pre-season opportunity:** order Pollen from AndyMark and build the goBILDA StarterBot Base so
-future work can happen against real game pieces before the September 12, 2026 kickoff.
+**SystemsCheck build-out (added 2026-07-20 — not slotted into the ordered 1–5 above; new scope).**
+Flesh out the pre-match diagnostic (`opmodes/SystemsCheck.java`, §5 "deterministic init, fail loud")
+beyond today's motor-presence + battery checks. Planned checks, recorded as TODOs in the file:
+- **Status-LED indicator** driven off the pass/warn/fail state (RED fail / YELLOW warn / GREEN clear)
+  so "is the robot happy?" is glanceable before START. Primary target: the **Control Hub's onboard
+  LED** (it's a `LynxModule` implementing `Blinker` — `hub.setConstant(Color.RED)`, reachable via the
+  same `hardwareMap.getAll(LynxModule.class)` handle `BulkReads` uses; zero extra hardware, bench-
+  visible only). Optional add-on: a **REV Blinkin + LED strip** (runs as a servo — see the
+  `SampleRevBlinkinLedDriver` sample) so the drive team can see it across the field; wrap both behind
+  a `util/StatusLED` helper that no-ops gracefully if the Blinkin isn't wired. LOOP-COST NOTE (§0/§4):
+  set the LED only on state **change**, never per loop. The Driver Hub's open USB port canNOT drive an
+  LED (no SDK path) — all indicator logic lives Control-Hub-side.
+- **Stick-at-rest / drift check** before START: fail loud if any gamepad axis rests outside the
+  deadzone, i.e. `|axis| >= JoystickCurve.deadzone` (the "zero point", currently 0.05) — a stick
+  drifting past zero will command drive the instant the match starts. (Open impl question for build
+  time: hard FAIL vs. loud YELLOW, since a resting thumb and a drifting stick look identical at that
+  instant.)
+- **Sensor checks** — Limelight reachable, Pinpoint (I2C) responding, rangefinder reading (the
+  check already stubbed at `SystemsCheck.java`; overlaps Step 4's Limelight work).
+
+**Robot Hold — idle position-hold / defensive brace (added 2026-07-20 — new scope, not in the
+ordered 1–5; depends on Step 2 Pedro tuning).** A big defensive-play feature: when all drive inputs
+sit at zero, the robot captures its **current field pose at that instant** and actively holds that
+exact x/y/heading, so an opponent pushing us off a scoring spot is fought back to where we were.
+Recorded as a TODO in `opmodes/TeleOpExample.java` (right after the `follower.setTeleOpDrive` block).
+Design already sketched there:
+- **Capture ONCE on entry**, never re-capture while held — the target is where the robot was the
+  moment the sticks hit zero; re-reading pose each loop lets a steady push walk the target and kills
+  the brace. Small local DRIVING↔HOLDING state (§3 permits a mode state machine), capturing
+  `follower.getPose()` only on the DRIVING→HOLDING transition; any input past deadzone releases.
+- **Reuse Pedro's `follower.holdPoint(pose)`** rather than a hand-rolled controller (verify the exact
+  2.1.2 signature against the docs) — so hold quality rides on the **Step-2 follower PIDF tuning**,
+  no second controller. Resume manual via `follower.startTeleopDrive()`.
+- **Don't co-run with `HeadingCorrector`** (`Drivetrain.headingCorrectionEnabled`) — Pedro's holdPoint
+  already owns heading; the two would fight. Gate the whole feature behind a `@Configurable` flag.
+- **Open question for build:** auto-hold-on-zero (what Aaron described) vs. a hold-enable button —
+  auto-hold can fight a driver making fine sub-deadzone line-up nudges. Decide on the bench.
+
+**SystemsCheck build-out (added 2026-07-20 — not slotted into the ordered 1–5 above; new scope).**
 
 ---
 
