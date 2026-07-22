@@ -227,7 +227,7 @@ public final class Persistence {
         String fileName = tuningFileFor(id.robot);
         if (fileName == null) {
             String msg = "ROBOT UNKNOWN [" + id.networkName + "] — NO tuning file loaded; running on "
-                    + "in-code fallback defaults. Name the hub ...-C-RC or ...-T-RC.";
+                    + "in-code fallback defaults. Name the hub 34672-RC or 34672-T-RC.";
             if (telemetry != null) telemetry.addLine(msg);
             RobotLog.i("Persistence: %s", msg);
             return false;

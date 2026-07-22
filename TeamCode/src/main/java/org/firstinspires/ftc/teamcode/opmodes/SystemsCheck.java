@@ -47,7 +47,7 @@ public class SystemsCheck extends LinearOpMode {
             // Not a hard fail — SystemsCheck runs on both robots, and an unnamed bench hub is a
             // legitimate state. But it means tuning selection failed closed (loaded nothing), so
             // say so loudly here rather than let it surprise anyone later.
-            notes.add("WARN robot identity UNKNOWN — set the hub name to ...-C-RC or ...-T-RC");
+            notes.add("WARN robot identity UNKNOWN — set the hub name to 34672-RC or 34672-T-RC");
         }
 
         // --- check each motor is present and configured ---

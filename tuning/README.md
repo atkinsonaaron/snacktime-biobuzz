@@ -6,7 +6,7 @@ runs on both robots and loads the right file by hub identity (see `CLAUDE.md` §
 
 | Robot | Hub network name | Committed file (here) | On-hub file it mirrors |
 |-------|------------------|-----------------------|------------------------|
-| Competition | `34672-C-RC` | `tuning/comp_tuning.json` | `/sdcard/FIRST/settings/comp_tuning.json` |
+| Competition | `34672-RC` | `tuning/comp_tuning.json` | `/sdcard/FIRST/settings/comp_tuning.json` |
 | Test bot | `34672-T-RC` | `tuning/testbot_tuning.json` | `/sdcard/FIRST/settings/testbot_tuning.json` |
 
 The files may not exist yet — they're created the first time you save a robot's tuning.

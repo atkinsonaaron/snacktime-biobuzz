@@ -23,17 +23,25 @@ import java.util.Locale;
  * harder-to-corrupt identity source than a file a stray commit could overwrite.
  *
  * NAMING SCHEME (set in the REV Hardware Client, one per hub):
- *   Competition robot -> 34672-C-RC   (resolves to COMPETITION)
+ *   Competition robot -> 34672-RC     (resolves to COMPETITION)
  *   Test bot          -> 34672-T-RC   (resolves to TESTBOT)
  *   anything else     -> UNKNOWN      (fail-closed: caller must load NO tuning and say so loudly)
  *
- * The single-letter suffix (-C / -T) is required by the FTC device-name validator
- * ([a-zA-Z0-9]+(-[a-zA-Z])?-(?i)(DS|RC), verified in RobotCore 11.1.0 sources) AND by competition
- * robot inspection — words like "-COMP" are rejected.
+ * The competition robot uses the CANONICAL FTC name "<team>-RC" (no letter) — that's what robot
+ * inspection expects for the primary Robot Controller. The test bot carries the single-letter "-T"
+ * ("-T-RC"), which the FTC device-name validator allows ([a-zA-Z0-9]+(-[a-zA-Z])?-(?i)(DS|RC),
+ * verified in RobotCore 11.1.0 sources). Because "34672-T-RC" ALSO ends in "-RC", TEST is matched
+ * FIRST (its more-specific suffix wins), then COMPETITION by its exact name.
  *
- * FAIL-CLOSED: any failure to read the name, or a name that matches neither suffix, resolves to
- * UNKNOWN. UNKNOWN must never be treated as "probably the comp robot" — the whole point is that an
- * unidentified hub can never silently load the wrong tuning (CLAUDE.md §5, deterministic + fail loud).
+ * FAIL-CLOSED — with one deliberate, inspection-forced weakening. Any failure to read the name, or
+ * a name that is neither the exact comp name nor the "-T-RC" test suffix, resolves to UNKNOWN and
+ * loads NO tuning. UNKNOWN must never be treated as "probably the comp robot" (CLAUDE.md §5,
+ * deterministic + fail loud). BUT: because the comp robot now uses the DEFAULT name "34672-RC", a
+ * freshly-flashed / factory-reset 34672 hub reads as COMPETITION rather than UNKNOWN. The old scheme
+ * ("34672-C-RC") deliberately kept comp OFF the default name so an unnamed hub failed closed; robot
+ * inspection forced comp onto the bare "<team>-RC", trading that guarantee away. Mitigations kept:
+ * comp is matched EXACTLY (other teams' "-RC" hubs and the old "-C-RC" name still fail closed), and
+ * the TEST bot's explicit "-T" letter means it can never be confused with comp in either direction.
  *
  * Read ONCE at OpMode init and hold the result; the name cannot change without a reboot, and
  * reading it is a preferences lookup that has no business in the hot loop (§4).
@@ -67,10 +75,13 @@ public final class RobotIdentity {
         Robot resolved = Robot.UNKNOWN;
         if (name != null) {
             String upper = raw.toUpperCase(Locale.US);
-            if (upper.endsWith("-C-RC")) {
-                resolved = Robot.COMPETITION;
-            } else if (upper.endsWith("-T-RC")) {
+            // TEST first: "34672-T-RC" also ends in "-RC", so its more-specific suffix must win.
+            // COMPETITION is the bare canonical "<team>-RC" (default FTC name), matched EXACTLY so
+            // other teams' "-RC" hubs and the old "-C-RC" name still fail closed to UNKNOWN.
+            if (upper.endsWith("-T-RC")) {
                 resolved = Robot.TESTBOT;
+            } else if (upper.equals("34672-RC")) {
+                resolved = Robot.COMPETITION;
             }
         }
 
@@ -96,7 +107,7 @@ public final class RobotIdentity {
             case COMPETITION: return "ROBOT: COMPETITION   [" + networkName + "]";
             case TESTBOT:     return "ROBOT: TEST BOT   [" + networkName + "]";
             default:          return "ROBOT: *** UNKNOWN *** name=[" + networkName
-                                     + "] — expected ...-C-RC or ...-T-RC";
+                                     + "] — expected 34672-RC or 34672-T-RC";
         }
     }
 

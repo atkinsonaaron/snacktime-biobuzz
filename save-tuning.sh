@@ -10,7 +10,7 @@
 #
 # USAGE:
 #   ./save-tuning.sh          # auto-detect which robot from the connected hub (recommended)
-#   ./save-tuning.sh comp     # force competition robot (hub 34672-C-RC)
+#   ./save-tuning.sh comp     # force competition robot (hub 34672-RC)
 #   ./save-tuning.sh test     # force test bot          (hub 34672-T-RC)
 #
 # PREREQS:
@@ -46,7 +46,7 @@ if [ -z "$robot" ]; then
     *snacktime_snapshot_COMPETITION.json) robot="comp" ;;
     *snacktime_snapshot_TESTBOT.json)     robot="test" ;;
     *snacktime_snapshot_UNKNOWN.json)
-      echo "ERROR: this hub's robot identity is UNKNOWN. Name it 34672-C-RC or 34672-T-RC in the"
+      echo "ERROR: this hub's robot identity is UNKNOWN. Name it 34672-RC or 34672-T-RC in the"
       echo "       REV Hardware Client and reboot, then re-run. (See WORKFLOW.md §11.)"
       exit 1 ;;
     *)

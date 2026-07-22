@@ -178,7 +178,7 @@ robot it's on at runtime from the **hub network name**, and loads that robot's o
 
 ### One-time setup per hub (do this before anything else works right)
 1. In the **REV Hardware Client**, name each Control Hub:
-   - Competition robot → **`34672-C-RC`**
+   - Competition robot → **`34672-RC`**
    - Test bot → **`34672-T-RC`**
    The single-letter suffix (`-C` / `-T`) is required — the FTC name validator rejects words like
    `-COMP`, and it's also the competition-inspection convention.

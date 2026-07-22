@@ -19,6 +19,20 @@ one-command rollback target is easy to find later.
 
 ---
 
+## 2026-07-21
+- **Competition hub renamed `34672-C-RC` → `34672-RC` (robot inspection required the primary RC to be
+  the canonical `<team>-RC`).** Updated `RobotIdentity` to match the test suffix `-T-RC` FIRST (it also
+  ends in `-RC`) then comp by its EXACT name, plus every doc/script/memory that named the comp hub
+  (`CLAUDE.md §10`, `STATUS.md`, `WORKFLOW.md`, `README.md`, `tuning/README.md`, `save-tuning.sh`, and
+  the UNKNOWN-hint strings in `Persistence.java` / `SystemsCheck.java`). Test bot unchanged
+  (`34672-T-RC`). **KNOWN TRADEOFF:** `34672-RC` is the DEFAULT FTC name, so a freshly-flashed/reset
+  34672 hub now reads as COMPETITION instead of failing closed to UNKNOWN — the fail-closed guarantee
+  is weaker on the comp side (documented in `RobotIdentity` + CLAUDE.md §10). Mitigated by exact-match
+  on comp (other teams' `-RC` hubs and the old `-C-RC` still fail closed) and the test bot's explicit
+  `-T`. No change to tuning/snapshot filenames (those key off the Robot enum, not the network name), so
+  `PersistenceFileNamingTest` is unaffected. (`util/RobotIdentity.java` + docs/scripts)
+
+## 2026-07-20
 - **Settled the SystemsCheck status indicator: pre-play status + warnings on the GAMEPAD LEDs, NOT
   the Control Hub.** Warnings belong in the drivers' hands. Drivers run Sony DualShock 4 / DualSense
   (controllable RGB light bar): gamepad1 steady BLUE + gamepad2 steady RED when all checks pass

@@ -287,7 +287,7 @@ hub network name — see §10). Two tuning categories, handled differently *on p
 - **Saving = commit the file the robot wrote** (pull the hub file into `tuning/`, commit). It is a
   **whole-file commit — never transcribe individual numbers into source.** The in-code static
   defaults are only a last-resort fallback for a fresh/reflashed hub before its file is restored.
-- An **UNKNOWN** hub (name not `...-C-RC` / `...-T-RC`) **loads and saves no tuning at all** (fail
+- An **UNKNOWN** hub (name neither `34672-RC` nor `...-T-RC`) **loads and saves no tuning at all** (fail
   closed) and runs on the in-code fallback defaults, saying so loudly. Never assumed to be comp.
 
 **Pedro constants** (follower velocities/PIDFs, pod offsets — `pedroPathing/Constants.java`):
@@ -405,12 +405,20 @@ math as testable pure logic (§9), with its tunables exposed as Tier-1 configura
 > Keep the config names in this table identical to the Robot Controller configuration on the hub —
 > **and identical across the test robot and the competition robot** — so code runs unmodified on both.
 > The one thing that is deliberately *different* per robot is the **hub network name** (set in the
-> REV Hardware Client), which is how the code tells the robots apart: **competition = `34672-C-RC`,
+> REV Hardware Client), which is how the code tells the robots apart: **competition = `34672-RC`,
 > test = `34672-T-RC`**. `util/RobotIdentity` reads it at init (verified API:
-> `DeviceNameManagerFactory.getInstance().getDeviceName()`); the FTC validator limits the team
-> suffix to a single letter, so `-C`/`-T`, not `-COMP`/`-TEST`. A name matching neither resolves to
-> UNKNOWN and the robot fails closed on tuning (§6). The resolved identity shows as a loud banner on
-> the Driver Hub and Panels, and is recorded in every snapshot.
+> `DeviceNameManagerFactory.getInstance().getDeviceName()`). The comp robot uses the canonical
+> `<team>-RC` name (no letter — what robot inspection expects for the primary RC); the test bot
+> carries a single-letter `-T` (the FTC validator allows one letter, so `-T`, not `-TEST`). Because
+> `34672-T-RC` also ends in `-RC`, the code matches the `-T-RC` test suffix FIRST, then comp by its
+> exact name. A name that is neither resolves to UNKNOWN and the robot fails closed on tuning (§6).
+> **Tradeoff to know (changed 2026-07-21):** comp moved from `34672-C-RC` to the bare `34672-RC` for
+> inspection, and `34672-RC` is the DEFAULT FTC name — so a freshly-flashed/factory-reset 34672 hub
+> now reads as COMPETITION, not UNKNOWN. The old `-C-RC` kept comp off the default name so unnamed
+> hubs failed closed; that guarantee is now weaker on the comp side. The test bot's explicit `-T`
+> keeps it positively distinguished (never mistakable for comp), and comp is matched exactly so other
+> teams' `-RC` hubs still fail closed. The resolved identity shows as a loud banner on the Driver Hub
+> and Panels, and is recorded in every snapshot.
 
 **One camera.** We run a single Limelight. The neural-net model lives on the camera and does
 **not** hot-reload via Sloth (§6) — it is its own artifact with its own versioning. Because there's

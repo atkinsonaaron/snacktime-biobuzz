@@ -328,11 +328,17 @@ Design already sketched there:
   in tension with the *per-robot* filenames added 2026-07-19 below — different axis.)
 - **Two robots, one codebase — robot-aware persistence — built 2026-07-19, model finalized same day.**
   The same commit runs on the Competition robot and the Test bot; `util/RobotIdentity` reads the hub
-  network name at init (`34672-C-RC` → COMPETITION, `34672-T-RC` → TESTBOT, else UNKNOWN) and chooses
+  network name at init (`34672-RC` → COMPETITION, `34672-T-RC` → TESTBOT, else UNKNOWN) and chooses
   files per-robot. Fail-closed: an UNKNOWN hub loads/saves no tuning and runs on in-code fallback
   defaults, loudly. Identity shows as a loud banner on the Driver Hub + Panels and is in every
   snapshot. Pure file-selection logic is unit-tested (`PersistenceFileNamingTest`). See `CLAUDE.md`
   §6/§7/§10, `WORKFLOW.md` §11, `tuning/README.md`.
+  - **Comp hub renamed `34672-C-RC` → `34672-RC` (2026-07-21, inspection).** `-T-RC` is matched first
+    (it also ends `-RC`), then comp by exact name. TRADEOFF: `34672-RC` is the DEFAULT FTC name, so a
+    freshly-flashed/reset 34672 hub now reads as COMPETITION rather than failing closed to UNKNOWN —
+    the fail-closed guarantee is weaker on the comp side. Mitigated: comp matched exactly (other teams'
+    `-RC` hubs + the old `-C-RC` still → UNKNOWN), and the test bot's explicit `-T` keeps it
+    unmistakable for comp.
   - **Tuning model (finalized 2026-07-19, revised from the first cut):** canonical tuning is the
     **committed per-robot files** `tuning/comp_tuning.json` and `tuning/testbot_tuning.json` — **both**
     robots' tuning is saved in git, neither is disposable. Saving = pull the hub file into `tuning/`
@@ -348,11 +354,12 @@ Design already sketched there:
     follower is built once at init, and holding whole `FollowerConstants` objects is robust across
     Pedro version bumps. **Not yet implemented** — build when the robots are actually tuned (no distinct
     values exist yet; two identical sets today would be premature). See "Next action" Step 1.
-  - **On-hub setup still required:** name the hubs in the REV Hardware Client — comp `34672-C-RC`,
+  - **On-hub setup still required:** name the hubs in the REV Hardware Client — comp `34672-RC`,
     test `34672-T-RC` — then reboot. Until then both resolve UNKNOWN (safe: fallback defaults, loud).
-  - **On-robot confirmation pending:** the exact string `getDeviceName()` returns on a Control Hub
-    (with/without the `-RC` suffix) — the code logs the raw name + matches on the `-C-RC`/`-T-RC`
-    suffix; first on-hub run confirms the format. Also confirm the identity banner renders in Panels.
+  - **On-robot confirmation pending:** the exact string `getDeviceName()` returns on the comp Control
+    Hub after the `34672-RC` rename — the code logs the raw name + matches comp exactly / test on the
+    `-T-RC` suffix; first on-hub run confirms the format. Also confirm the identity banner renders in
+    Panels. (Test bot already confirmed: `34672-T-RC` → TESTBOT, RC log 2026-07-19.)
 - **No enforced branch protection on `master` — decided 2026-07-18.** The repo is private, owned by
   the `snacktime-robotics-34672` GitHub org, which is on the Free plan — required status checks
   and required reviews aren't available for private repos below GitHub Team ($4/user/month). Chose

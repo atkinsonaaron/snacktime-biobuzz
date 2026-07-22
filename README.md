@@ -59,14 +59,14 @@ test/logic/      Off-robot unit tests (`./gradlew :TeamCode:test`) for the pure 
 
 ## Two robots, one codebase (CLAUDE.md §6/§7/§10, WORKFLOW.md §11, tuning/README.md)
 The same commit runs on the **Competition robot** and a **Test bot**. The code reads the hub network
-name (`34672-C-RC` → comp, `34672-T-RC` → test) via `util/RobotIdentity` and loads that robot's own
+name (`34672-RC` → comp, `34672-T-RC` → test) via `util/RobotIdentity` and loads that robot's own
 tuning; an unnamed hub fails closed (loads nothing, runs on in-code fallback defaults, says so
 loudly). Canonical tuning is the **committed per-robot files** in `tuning/` — *both* robots are
 saved in git; saving is a whole-file commit, never transcribing numbers into source. Pedro constants
 are per-robot sets in code. A `ROBOT: …` banner shows on the Driver Hub and Panels.
 
 ## Start here (Phase 0, CLAUDE.md §13 — see STATUS.md for current state)
-1. Name each hub in the REV Hardware Client (`34672-C-RC` / `34672-T-RC`) and match device config
+1. Name each hub in the REV Hardware Client (`34672-RC` / `34672-T-RC`) and match device config
    names to the hardware map (§10, WORKFLOW.md §11).
 2. Get `Drivetrain` driving with Panels open (field view + per-wheel telemetry).
 3. Prove the loop works end to end: **Sloth hot-reload**, a **snapshot** writing on stop, and the
